@@ -419,6 +419,6 @@ bool Lexer::analyze(std::string input_code) {
                     }
     }
     for (int i = 0; i < token_list.size(); i++)
-        std::cout << token_list[i].category << " " << token_list[i].no << " " << token_list[i].content << std::endl;
+        std::cout << token_list[i].category << " " << token_list[i].no << " " << token_list[i].line << " " << token_list[i].col << " " << token_list[i].content << std::endl;
     return flag;
 }
