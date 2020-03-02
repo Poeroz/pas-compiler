@@ -1,22 +1,40 @@
 #include <string>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include "args.h"
 #include "argparser.h"
 
-void ArgParser::parse_arguments(int argc, char *argv[]) const {
+ArgParser::ArgParser() {}
+
+ArgParser::~ArgParser() {}
+
+bool ArgParser::parse_arguments(int argc, char *argv[]) const {
     bool version_flag = false;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg[0] != '-')
-            INPUT_FILE_NAME = arg[0];
+            INPUT_FILE_NAME = argv[i];
         else
             if (arg == "-v") {
-                std::cout << "XXX Pascal-S Complier version 0.0.1" << std::endl;
+                std::cerr << "XXX Pascal-S Complier version 0.0.1" << std::endl;
                 version_flag = true;
             }
     }
     if (INPUT_FILE_NAME == "" && ! version_flag) {
-        std::cout << "\033[31m\033[1merror:\033[0m no input files" << std::endl;
+        std::cerr << ERROR_OUT << "no input files" << std::endl;
+        return false;
+    }
+    return true;
+}
+
+std::string ArgParser::parse_input_file() const {
+    std::ifstream input_file(INPUT_FILE_NAME);
+    if (! input_file.is_open()) {
+        std::cerr << ERROR_OUT << "file does not exist" << std::endl;
         exit(1);
     }
+    std::stringstream input_string_stream;
+    input_string_stream << input_file.rdbuf();
+    return input_string_stream.str();
 }

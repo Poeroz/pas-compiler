@@ -1,10 +1,15 @@
 #ifndef ARGPARSER_H
 #define ARGPARSER_H
 
+#include <string>
+
 
 class ArgParser {
 public:
-    void parse_arguments(int argc, char *argv[]) const;
+    ArgParser();
+    ~ArgParser();
+    bool parse_arguments(int argc, char *argv[]) const;
+    std::string parse_input_file() const;
 };
 
 #endif
