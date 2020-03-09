@@ -1,8 +1,9 @@
 #include <string>
 #include <unordered_map>
+#include <iostream>
 #include "args.h"
 
-const int num_keywords = 54, num_data_types = 38, num_rtl_functions = 46;
+const int num_keywords = 54, num_data_types = 38, num_rtl_functions = 46, num_operators = 16, num_symbols = 9;
 const std::string keywords[54] = {"and", "array", "asm", "begin", "break", "case", "const", "constructor", "continue", "destructor",
                                   "div", "do", "downto", "else", "end", "false", "file", "for", "function", "goto",
                                   "if", "implementation", "in", "inline", "interface", "label", "mod", "nil", "not", "object",
@@ -18,8 +19,29 @@ const std::string rtl_functions[46] = {"read", "readln", "readstr", "write", "wr
                                        "stringofchar", "upcase", "val", "abs", "arctan", "cos", "dec", "exp", "frac", "inc",
                                        "int", "ln", "odd", "pi", "random", "randomize", "round", "sin", "sqr", "sqrt",
                                        "trunc", "include", "exclude", "fillchar", "fillbyte", "move"};
+const int num_terminal = 167;
 
 std::string INPUT_FILE_NAME = "";
+std::string input_code = "";
+bool USE_LL1_PARSER = false;
+
 int token_num = 0;
 std::unordered_map<std::string, int> token_no;
 std::unordered_map<int, std::string> no_token;
+
+
+std::string get_line(int pos) {
+    int st = pos, ed = pos;
+    for (; st >= 0 && input_code[st] != '\n'; st--);
+    st++;
+    for (; ed < input_code.length() && input_code[ed] != '\n'; ed++);
+    return input_code.substr(st, ed - st);
+}
+
+void output_error(int line, int col, int pos, std::string error_info) {
+    std::cerr << line << ":" << col << ": " << ERROR_OUT << error_info << std::endl;
+    std::cerr << get_line(pos) << std::endl;
+    for (int i = 0; i < col - 1; i++)
+        std::cerr << ' ';
+    std::cerr << ERROR_POINTER << std::endl;
+}

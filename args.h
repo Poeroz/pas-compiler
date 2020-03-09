@@ -2,7 +2,10 @@
 #define ARGS_H
 
 #include <string>
+#include <unordered_set>
 #include <unordered_map>
+#include <vector>
+#include <cctype>
 
 #define ERROR_OUT "\033[31m\033[1merror:\033[0m "
 #define ERROR_POINTER "\033[32m^\033[0m"
@@ -183,24 +186,88 @@
         44: fillbyte
         45: move
 */
-struct Token {
-    int category, no, line, col;
-    std::string content;
-    Token() {}
-    Token(int category, int no, int line, int col, std::string content = "") :
-        category(category), no(no), line(line), col(col), content(content) {}
+extern const int num_terminal;
+
+/*
+    0: basic types
+    1: pointer
+    2: array
+    3: enumerate
+    4: record
+    5: set
+    6: named type
+*/
+
+struct Type {
+    int category;
+    union {
+        int type_no;
+        int array_len;
+    };
+    union {
+        Type* pointer_type;
+        Type* array_type;
+        Type* set_type;
+    };
+    std::string array_bias;
+    std::vector<int> enum_list;
+    std::vector<std::pair<int, Type*> > record_list;
 };
 
+struct Token {
+    int category, no, line, col, pos;
+    std::string content;
+    Type *type;
+    Token() {}
+    Token(int category, int no, int line, int col, int pos, std::string content = "") :
+        category(category), no(no), line(line), col(col), pos(pos), content(content) {}
+};
 
-extern const int num_keywords, num_data_types, num_rtl_functions;
+/*
+    -1: nonterminal symbols
+*/
+#define END_OF_TOKENS INT_MAX
+//end of tokens only in lookahead
+#define EMPTY_SYMBOL INT_MIN
+//empty symbol only in first
+struct Symbol {
+    int category, no;
+    Symbol() {}
+    Symbol(int category, int no) :
+        category(category), no(no) {}
+    bool operator < (const Symbol &_) const {
+        return category == _.category ? no < _.no : category < _.category;
+    }
+    bool operator == (const Symbol &_) const {
+        return category == _.category && no == _.no;
+    }
+    Type *type;
+
+};
+
+struct SymbolTable {
+    SymbolTable* parent;
+    std::unordered_set<std::string> labels;
+    std::unordered_map<int, Type*> named_types;
+    std::unordered_map<int, Type*> symbols;
+    std::unordered_map<int, SymbolTable*> subtable; 
+};
+
+extern const int num_keywords, num_data_types, num_rtl_functions, num_operators, num_symbols;
 extern const std::string keywords[];
 extern const std::string data_types[];
 extern const std::string rtl_functions[];
 
 extern std::string INPUT_FILE_NAME;
+extern std::string input_code;
+extern bool USE_LL1_PARSER;
+
 extern int token_num;
 extern std::unordered_map<std::string, int> token_no;
 extern std::unordered_map<int, std::string> no_token;
 
+
+std::string get_line(int pos);
+void output_error(int line, int col, int pos, std::string error_info);
 
 #endif

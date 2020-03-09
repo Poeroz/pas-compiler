@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include "args.h"
 
 
 class Lexer {
@@ -10,16 +11,15 @@ public:
     Lexer();
     ~Lexer();
     bool analyze(std::string input_code);
+    std::vector<Token> get_token_list() const;
 
 private:
     char next_char() const;
-    std::string get_line(int pos) const;
     void go_forw();
     void go_cur();
     void go_back_forw();
     bool get_eof() const;
     bool forw_get_eof() const;
-    void output_cur_error(std::string error_info) const;
     std::string match_pattern(std::string pattern);
     bool string_analyze();
     bool number_analyze();

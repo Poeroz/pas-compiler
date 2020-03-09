@@ -11,6 +11,7 @@ ArgParser::~ArgParser() {}
 
 bool ArgParser::parse_arguments(int argc, char *argv[]) const {
     bool version_flag = false;
+    bool lalr_set = true;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg[0] != '-')
@@ -20,6 +21,20 @@ bool ArgParser::parse_arguments(int argc, char *argv[]) const {
                 std::cerr << "XXX Pascal-S Complier version 0.0.1" << std::endl;
                 version_flag = true;
             }
+            else
+                if (arg == "-ll1")
+                    USE_LL1_PARSER = true;
+                else
+                    if (arg == "-lalr")
+                        lalr_set = true;
+                    else {
+                        std::cerr << ERROR_OUT << "unsupported option \'" << arg << "\'" << std::endl;
+                        return false;
+                    }
+        if (USE_LL1_PARSER && lalr_set) {
+            std::cerr << ERROR_OUT << "cannot set two parsers" << std::endl;
+            return false;
+        }
     }
     if (INPUT_FILE_NAME == "" && ! version_flag) {
         std::cerr << ERROR_OUT << "no input files" << std::endl;
