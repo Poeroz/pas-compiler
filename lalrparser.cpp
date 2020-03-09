@@ -4,7 +4,7 @@
 #include "lalrparser.h"
 
 
-int LalrParser::num_nonterminal = 7;
+int LalrParser::num_nonterminal = 8;
 
 LalrParser::LalrParser() {
     symbol_table.parent = NULL;
@@ -134,16 +134,16 @@ void LalrParser::grammar_init() {
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //label-list = label
-    tmp.left = 6;
+    tmp.left = 7;
     tmp.right.clear();
     tmp.right.push_back(Symbol(3, 0));
     tmp.process = &LalrParser::process_label;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //label-list = label-list ',' label
-    tmp.left = 6;
+    tmp.left = 7;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(-1, 6));
+    tmp.right.push_back(Symbol(-1, 7));
     tmp.right.push_back(Symbol(7, 1));
     tmp.right.push_back(Symbol(3, 0));
     tmp.process = &LalrParser::process_label;
@@ -243,9 +243,9 @@ void LalrParser::cal_first() {
         for (int j = num_nonterminal; j < num_nonterminal + num_terminal; j++)
             if (matrix_first[i][j])
                 first[i].push_back(get_symbol(j));
-        //std::cout << i << ":\n";
-        //for (int j = 0; j < first[i].size(); j++)
-        //    std::cout << first[i][j].category << " " << first[i][j].no << "\n";
+        /*std::cout << i << ":\n";
+        for (int j = 0; j < first[i].size(); j++)
+            std::cout << first[i][j].category << " " << first[i][j].no << "\n";*/
     }
 }
 
@@ -395,6 +395,12 @@ void LalrParser::cal_collection_of_sets_of_items() {
         }
     }
     state_num = set_of_items.size();
+    /*std::cout << state_num << std::endl;
+    for (int i = 0; i < state_num; i++) {
+        std::cout << i << "   "<< transfer[i].size() << std::endl;
+        for (auto j = transfer[i].begin(); j != transfer[i].end(); j++)
+            std::cout << j->first.category << " " << j->first.no << "  " << j->second << std::endl;
+    }*/
 }
 
 void LalrParser::cal_parsing_table() {
