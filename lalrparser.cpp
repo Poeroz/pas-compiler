@@ -355,7 +355,7 @@ void LalrParser::cal_collection_of_sets_of_items() {
             std::set<Item> next_set_of_items;
             for (std::set<Item>::iterator it = set_of_items[x].begin(); it != set_of_items[x].end(); it++)
                 if (it->dot_pos < grammar[it->generation_no].right.size() && grammar[it->generation_no].right[it->dot_pos] == next_symbol) {
-                    Item y = Item(it->generation_no, it->dot_pos + 1);
+                    Item y(it->generation_no, it->dot_pos + 1);
                     y.lookahead = it->lookahead;
                     next_set_of_items.insert(y);
                 }
