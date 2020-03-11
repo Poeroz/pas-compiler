@@ -214,13 +214,15 @@ struct Type {
     std::vector<std::pair<int, Type*> > record_list;
 };
 
+struct Symbol;
+
 struct Token {
     int category, no, line, col, pos;
     std::string content;
     Type *type;
-    Token() {}
-    Token(int category, int no, int line, int col, int pos, std::string content = "") :
-        category(category), no(no), line(line), col(col), pos(pos), content(content) {}
+    Token();
+    Token(int category, int no, int line = 1, int col = 1, int pos = 0, std::string content = "");
+    Token(Symbol s);
 };
 
 /*
@@ -232,17 +234,11 @@ struct Token {
 //empty symbol only in first
 struct Symbol {
     int category, no;
-    Symbol() {}
-    Symbol(int category, int no) :
-        category(category), no(no) {}
-    bool operator < (const Symbol &_) const {
-        return category == _.category ? no < _.no : category < _.category;
-    }
-    bool operator == (const Symbol &_) const {
-        return category == _.category && no == _.no;
-    }
-    Type *type;
-
+    Symbol();
+    Symbol(int category, int no);
+    Symbol(Token t);
+    bool operator < (const Symbol &_) const;
+    bool operator == (const Symbol &_) const;
 };
 
 struct SymbolTable {

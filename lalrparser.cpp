@@ -17,24 +17,24 @@ LalrParser::LalrParser() {
 
 LalrParser::~LalrParser() {}
 
-bool LalrParser::process_default() {
-    return true;
+bool LalrParser::process_default(Token &new_token) {
+    return true;;
 }
 
-bool LalrParser::process_M1() {
+bool LalrParser::process_M1(Token &new_token) {
     result << "#include <bits/stdc++.h>\n";
     return true;
 }
 
-bool LalrParser::process_label() {
-    std::string label = parsing_stack.back().content;
+bool LalrParser::process_label(Token &new_token) {
+    std::string label = parsing_stack.back().second.content;
     if (label.length() > 4) {
-        output_error(parsing_stack.back().line, parsing_stack.back().col, parsing_stack.back().pos, "label syntax error");
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "label syntax error");
         return false;
     }
     for (int i = 0; i < label.length(); i++)
         if (! isdigit(label[i])) {
-            output_error(parsing_stack.back().line, parsing_stack.back().col, parsing_stack.back().pos, "label syntax error");
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "label syntax error");
             return false;
         }
     current_symbol_table->labels.insert(label);
@@ -420,8 +420,43 @@ void LalrParser::cal_parsing_table() {
 }
 
 bool LalrParser::parse(std::vector<Token> tokens) {
+    bool flag = true;
     token_list = tokens;
-    return true;
+    parsing_stack.push_back(std::make_pair(0, Token(EMPTY_SYMBOL, 0)));
+    int cur_ptr = 0;
+    for (; ;) {
+        Token cur_token;
+        if (cur_ptr == token_list.size())
+            cur_token = Token(END_OF_TOKENS, 0);
+        else
+            cur_token = token_list[cur_ptr];
+        if (parsing_table[parsing_stack.back().first][Symbol(cur_token)].first == 0) {
+            output_error(cur_token.line, cur_token.col, cur_token.pos, "unexpected token");
+            flag = false;
+            break;
+        }
+        if (parsing_table[parsing_stack.back().first][Symbol(cur_token)].first == 3)
+            break;
+        if (parsing_table[parsing_stack.back().first][Symbol(cur_token)].first == 1) {
+            parsing_stack.push_back(std::make_pair(parsing_table[parsing_stack.back().first][Symbol(cur_token)].second, cur_token));
+            cur_ptr++;
+        }
+        else {
+            int generation_no = parsing_table[parsing_stack.back().first][Symbol(cur_token)].second;
+            Token new_token(-1, grammar[generation_no].left, 
+                parsing_stack[parsing_stack.size() - grammar[generation_no].right.size()].second.line, 
+                parsing_stack[parsing_stack.size() - grammar[generation_no].right.size()].second.col, 
+                parsing_stack[parsing_stack.size() - grammar[generation_no].right.size()].second.pos);
+            if (! (this->*(grammar[generation_no].process))(new_token)) {
+                flag = false;
+                break;
+            }
+            for (int i = 0; i < grammar[generation_no].right.size(); i++)
+                parsing_stack.pop_back();
+            parsing_stack.push_back(std::make_pair(parsing_table[parsing_stack.back().first][Symbol(new_token)].second, new_token));
+        }
+    }
+    return flag;
 }
 
 std::string LalrParser::get_result() const {

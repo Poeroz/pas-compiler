@@ -21,6 +21,33 @@ const std::string rtl_functions[46] = {"read", "readln", "readstr", "write", "wr
                                        "trunc", "include", "exclude", "fillchar", "fillbyte", "move"};
 const int num_terminal = 167;
 
+Token::Token() {}
+
+Token::Token(int category, int no, int line, int col, int pos, std::string content) :
+    category(category), no(no), line(line), col(col), pos(pos), content(content), type(NULL) {}
+
+Token::Token(Symbol s) :
+    category(s.category), no(s.no) {}
+
+Symbol::Symbol() {}
+
+Symbol::Symbol(int category, int no) :
+    category(category), no(no) {}
+
+Symbol::Symbol(Token t) :
+    category(t.category), no(t.no) {
+    if (t.category >= 2 && t.category <= 5)
+        no = 0;
+}
+
+bool Symbol::operator < (const Symbol &_) const {
+    return category == _.category ? no < _.no : category < _.category;
+}
+
+bool Symbol::operator == (const Symbol &_) const {
+    return category == _.category && no == _.no;
+}
+
 std::string INPUT_FILE_NAME = "";
 std::string input_code = "";
 bool USE_LL1_PARSER = false;

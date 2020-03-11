@@ -20,15 +20,15 @@ private:
     struct Generation {
         int left;
         std::vector<Symbol> right;
-        bool (LalrParser::*process)();
+        bool (LalrParser::*process)(Token&);
     };
     std::vector<Generation> grammar;
     std::map<int, std::vector<int> > nonterminal_grammar;
-    std::vector<Token> parsing_stack;
+    std::vector<std::pair<int, Token> > parsing_stack;
     void grammar_init();
-    bool process_default();
-    bool process_M1();
-    bool process_label();
+    bool process_default(Token &new_token);
+    bool process_M1(Token &new_token);
+    bool process_label(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);
