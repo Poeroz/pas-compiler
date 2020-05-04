@@ -2,6 +2,7 @@
 #define ARGS_H
 
 #include <string>
+#include <climits>
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
@@ -73,10 +74,10 @@
         1: byte
         2: uint16
         3: word
-        4: dword
-        5: cardinal
-        6: uint32
-        7: longword
+        4: uint32
+        5: longword
+        6: dword
+        7: cardinal
         8: nativeuint
         9: uint64
         10: qword
@@ -202,14 +203,16 @@ struct Type {
     int category;
     union {
         int type_no;
-        int array_len;
+        int named_id_no;
     };
     union {
         Type* pointer_type;
         Type* array_type;
         Type* set_type;
+        Type* named_type;
     };
-    std::string array_bias;
+    int array_index_type; // int -- 0 char -- 1
+    std::string array_uprange, array_bias;
     std::vector<int> enum_list;
     std::vector<std::pair<int, Type*> > record_list;
 };
@@ -219,6 +222,7 @@ struct Symbol;
 struct Token {
     int category, no, line, col, pos;
     std::string content;
+    int str_len;
     Type *type;
     Token();
     Token(int category, int no, int line = 1, int col = 1, int pos = 0, std::string content = "");
@@ -246,7 +250,11 @@ struct SymbolTable {
     std::unordered_set<std::string> labels;
     std::unordered_map<int, Type*> named_types;
     std::unordered_map<int, Type*> symbols;
-    std::unordered_map<int, SymbolTable*> subtable; 
+    std::unordered_map<int, bool> is_const;
+    std::unordered_map<int, std::string> const_val; //for integers, floats and strings
+    std::unordered_map<int, int> const_strlen; //for const strings
+    std::unordered_map<int, SymbolTable*> subtable;
+    bool defined(int no) const;
 };
 
 extern const int num_keywords, num_data_types, num_rtl_functions, num_operators, num_symbols;

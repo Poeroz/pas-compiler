@@ -5,7 +5,7 @@
 #include "args.h"
 #include "argparser.h"
 #include "lexer.h"
-#include "lalrparser.h"
+#include "parser.h"
 
 
 int main(int argc, char *argv[]) {
@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     }
     if (USE_LL1_PARSER);
     else {
-        LalrParser parser;
+        Parser parser;
         if (! parser.parse(lexer.get_token_list())) {
             std::cerr << ERROR_OUT << "compilation error" << std::endl;
             return -1;

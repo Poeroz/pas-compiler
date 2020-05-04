@@ -1,5 +1,5 @@
-#ifndef LALRPARSER_H
-#define LALRPARSER_H
+#ifndef PARSER_H
+#define PARSER_H
 
 #include <vector>
 #include <sstream>
@@ -8,10 +8,10 @@
 #include <set>
 #include "args.h"
 
-class LalrParser {
+class Parser {
 public:
-    LalrParser();
-    ~LalrParser();
+    Parser();
+    ~Parser();
     bool parse(std::vector<Token> tokens);
     std::string get_result() const;
 private:
@@ -20,15 +20,38 @@ private:
     struct Generation {
         int left;
         std::vector<Symbol> right;
-        bool (LalrParser::*process)(Token&);
+        bool (Parser::*process)(Token&);
     };
     std::vector<Generation> grammar;
     std::map<int, std::vector<int> > nonterminal_grammar;
     std::vector<std::pair<int, Token> > parsing_stack;
     void grammar_init();
+    int indent;
+    std::pair<int, std::string> pas_int_to_c(int sign, std::string s) const;
+    std::pair<int, std::string> pas_string_to_c(std::string s) const;
+    std::string pas_basic_type_to_c(int type_no) const;
+    std::string id_with_type(Type *type, std::string id) const;
     bool process_default(Token &new_token);
+    bool process_newline(Token &new_token);
     bool process_M1(Token &new_token);
     bool process_label(Token &new_token);
+    bool process_int_constant_def(Token &new_token);
+    bool process_float_constant_def(Token &new_token);
+    bool process_string_constant_def(Token &new_token);
+    bool process_bool_constant_def(Token &new_token);
+    bool process_type_def(Token &new_token);
+    bool process_id_type_denoter(Token &new_token);
+    bool process_basic_type_denoter(Token &new_token);
+    bool process_array_type_denoter(Token &new_token);
+    bool process_array_single_subrange_list(Token &new_token);
+    bool process_array_subrange_list(Token &new_token);
+    bool process_array_subrange(Token &new_token);
+    bool process_no_sign_signed_integer(Token &new_token);
+    bool process_signed_integer(Token &new_token);
+    bool process_no_sign_signed_float(Token &new_token);
+    bool process_signed_float(Token &new_token);
+    bool process_string(Token &new_token);
+    bool process_array_index(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);
