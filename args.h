@@ -264,7 +264,6 @@ extern const std::string rtl_functions[];
 
 extern std::string INPUT_FILE_NAME;
 extern std::string input_code;
-extern bool USE_LL1_PARSER;
 
 extern int token_num;
 extern std::unordered_map<std::string, int> token_no;
