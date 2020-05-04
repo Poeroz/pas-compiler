@@ -558,8 +558,8 @@ bool Parser::process_array_subrange(Token &new_token) {
         new_token.type = new Type;
         new_token.type->category = 2;
         new_token.type->array_index_type = 0;
-        new_token.type->array_uprange = parsing_stack[parsing_stack.size() - 3].second.content;
-        new_token.type->array_bias = parsing_stack.back().second.content;
+        new_token.type->array_bias = parsing_stack[parsing_stack.size() - 3].second.content;
+        new_token.type->array_uprange = parsing_stack.back().second.content;
     }
     else {
         if (! (parsing_stack.back().second.type->type_no == 31 || parsing_stack.back().second.type->type_no == 33)) {
@@ -578,8 +578,8 @@ bool Parser::process_array_subrange(Token &new_token) {
         new_token.type = new Type;
         new_token.type->category = 2;
         new_token.type->array_index_type = 1;
-        new_token.type->array_uprange = parsing_stack[parsing_stack.size() - 3].second.content;
-        new_token.type->array_bias = parsing_stack.back().second.content;
+        new_token.type->array_bias = parsing_stack[parsing_stack.size() - 3].second.content;
+        new_token.type->array_uprange = parsing_stack.back().second.content;
     }
     return true;
 }
