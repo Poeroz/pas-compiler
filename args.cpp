@@ -49,7 +49,7 @@ bool Symbol::operator == (const Symbol &_) const {
 }
 
 bool SymbolTable::defined(int no) const {
-    return named_types.count(no) || symbols.count(no) || subtable.count(no);
+    return named_types.count(no) || symbols.count(no) || subtable.count(no) || enum_items.count(no);
 }
 
 std::string INPUT_FILE_NAME = "";

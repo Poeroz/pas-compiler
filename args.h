@@ -213,7 +213,7 @@ struct Type {
     };
     int array_index_type; // int -- 0 char -- 1
     std::string array_uprange, array_bias;
-    std::vector<int> enum_list;
+    std::vector<std::pair<int, std::string> > enum_list;
     std::vector<std::pair<int, Type*> > record_list;
 };
 
@@ -254,6 +254,7 @@ struct SymbolTable {
     std::unordered_map<int, std::string> const_val; //for integers, floats and strings
     std::unordered_map<int, int> const_strlen; //for const strings
     std::unordered_map<int, SymbolTable*> subtable;
+    std::unordered_set<int> enum_items;
     bool defined(int no) const;
 };
 

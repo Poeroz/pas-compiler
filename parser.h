@@ -44,6 +44,7 @@ private:
     bool process_basic_type_denoter(Token &new_token);
     bool process_pointer_type_denoter(Token &new_token);
     bool process_array_type_denoter(Token &new_token);
+    bool process_enum_type_denoter(Token &new_token);
     bool process_array_single_subrange_list(Token &new_token);
     bool process_array_subrange_list(Token &new_token);
     bool process_array_subrange(Token &new_token);
@@ -53,6 +54,9 @@ private:
     bool process_signed_float(Token &new_token);
     bool process_string(Token &new_token);
     bool process_array_index(Token &new_token);
+    bool process_single_enum_list(Token &new_token);
+    bool process_enum_list(Token &new_token);
+    bool process_enum_item(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);

@@ -3,10 +3,13 @@
 #include <cstring>
 #include <queue>
 #include <string>
+#include <unordered_set>
+#include <unordered_map>
+#include <vector>
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 22;
+int Parser::num_nonterminal = 24;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
@@ -314,7 +317,7 @@ std::string Parser::id_with_type(Type *type, std::string id) const {
             res += id;
             break;
         case 1:
-            res = '*';
+            res = "*";
             res += id;
             if (type->pointer_type->category == 2)
                 res = "(" + res + ")";
@@ -326,6 +329,20 @@ std::string Parser::id_with_type(Type *type, std::string id) const {
             else
                 res = id + "['" + type->array_uprange + "' - '" + type->array_bias + "' + 1]";
             res = id_with_type(type->array_type, res);
+            break;
+        case 3:
+            res = "enum {\n";
+            for (int i = 0; i < type->enum_list.size(); i++) {
+                for (int j = 0; j < indent + 1; j++)
+                    res += "\t";
+                res += no_token[type->enum_list[i].first];
+                if (type->enum_list[i].second != "")
+                    res += " = " + type->enum_list[i].second;
+                if (i != type->enum_list.size() - 1)
+                    res += ",";
+                res += "\n";
+            }
+            res += "} " + id;
             break;
         case 6:
             res = no_token[type->named_id_no] + " " + id;
@@ -455,7 +472,7 @@ bool Parser::process_bool_constant_def(Token &new_token) {
 
 bool Parser::process_type_def(Token &new_token) {
     int id_no = parsing_stack[parsing_stack.size() - 4].second.no;
-    for (SymbolTable *p = current_symbol_table; p != NULL; p = p->parent)
+    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
         if (p->defined(id_no)) {
             output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "identifier has already been defined");
             return false;
@@ -475,7 +492,7 @@ bool Parser::process_id_type_denoter(Token &new_token) {
     int id_no = parsing_stack.back().second.no;
     Type *tmp = NULL;
     bool flag = false;
-    for (SymbolTable *p = current_symbol_table; p != NULL; p = p->parent)
+    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
         if (p->defined(id_no)) {
             if (p->named_types.count(id_no))
                 tmp = p->named_types[id_no];
@@ -538,8 +555,15 @@ bool Parser::process_pointer_type_denoter(Token &new_token) {
 bool Parser::process_array_type_denoter(Token &new_token) {
     new_token.type = parsing_stack[parsing_stack.size() - 4].second.type;
     Type *p = new_token.type;
-    for (; p->array_type != NULL; p = p->array_type);
+    for (; p->array_type; p = p->array_type);
     p->array_type = parsing_stack.back().second.type;
+    return true;
+}
+
+bool Parser::process_enum_type_denoter(Token &new_token) {
+    new_token.type = parsing_stack[parsing_stack.size() - 2].second.type;
+    for (int i = 0; i < new_token.type->enum_list.size(); i++)
+        current_symbol_table->enum_items.insert(new_token.type->enum_list[i].first);
     return true;
 }
 
@@ -662,7 +686,7 @@ bool Parser::process_array_index(Token &new_token) {
         bool flag = false;
         bool constant_flag = false;
         new_token.type = NULL;
-        for (SymbolTable *p = current_symbol_table; p != NULL; p = p->parent)
+        for (SymbolTable *p = current_symbol_table; p; p = p->parent)
             if (p->defined(id_no)) {
                 if (p->is_const.count(id_no)) {
                     constant_flag = true;
@@ -699,6 +723,47 @@ bool Parser::process_array_index(Token &new_token) {
             new_token.str_len = parsing_stack.back().second.str_len;
         return true;
     }
+}
+
+bool Parser::process_single_enum_list(Token &new_token) {
+    new_token.type = parsing_stack.back().second.type;
+    return true;
+}
+
+bool Parser::process_enum_list(Token &new_token) {
+    new_token.type = parsing_stack[parsing_stack.size() - 3].second.type;
+    for (int i = 0; i < new_token.type->enum_list.size(); i++)
+        if (new_token.type->enum_list[i].first == parsing_stack.back().second.type->enum_list[0].first) {
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "duplicate identifier");
+            return false;
+        }
+    new_token.type->enum_list.push_back(parsing_stack.back().second.type->enum_list[0]);
+    delete parsing_stack.back().second.type;
+    return true;
+}
+
+bool Parser::process_enum_item(Token &new_token) {
+    new_token.type = new Type;
+    new_token.type->category = 3;
+    std::pair<int, std::string> enum_item;
+    if (parsing_stack.back().second.category == 2) {
+        for (SymbolTable *p = current_symbol_table; p; p = p->parent)
+            if (p->defined(parsing_stack.back().second.no)) {
+                output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier has already been defined");
+                return false;
+            }
+        enum_item = std::make_pair(parsing_stack.back().second.no, "");
+    }
+    else {
+        for (SymbolTable *p = current_symbol_table; p; p = p->parent)
+            if (p->defined(parsing_stack[parsing_stack.size() - 3].second.no)) {
+                output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "identifier has already been defined");
+                return false;
+            }
+        enum_item = std::make_pair(parsing_stack[parsing_stack.size() - 3].second.no, parsing_stack.back().second.content);
+    }
+    new_token.type->enum_list.push_back(enum_item);
+    return true;
 }
 
 void Parser::grammar_init() {
@@ -953,7 +1018,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_basic_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //type-denoter = ^ type-denoter
+    //type-denoter = '^' type-denoter
     tmp.left = 15;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 14));
@@ -961,7 +1026,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_pointer_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //type-denoter = array [ subrange-list ] of type-denoter
+    //type-denoter = array '[' subrange-list ']' of type-denoter
     tmp.left = 15;
     tmp.right.clear();
     tmp.right.push_back(Symbol(0, 1));
@@ -973,6 +1038,15 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_array_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //type-denoter = '(' enum-list ')'
+    tmp.left = 15;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(7, 4));
+    tmp.right.push_back(Symbol(-1, 22));
+    tmp.right.push_back(Symbol(7, 5));
+    tmp.process = &Parser::process_enum_type_denoter;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //subrange-list = subrange
     tmp.left = 16;
     tmp.right.clear();
@@ -980,7 +1054,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_array_single_subrange_list;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //subrange-list = subrange , subrange-list
+    //subrange-list = subrange ',' subrange-list
     tmp.left = 16;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 17));
@@ -989,7 +1063,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_array_subrange_list;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //subrange = array-index .. array-index
+    //subrange = array-index '..' array-index
     tmp.left = 17;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 21));
@@ -1005,7 +1079,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_no_sign_signed_integer;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //signed-integer = + integer-literal
+    //signed-integer = '+' integer-literal
     tmp.left = 18;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 7));
@@ -1013,7 +1087,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_signed_integer;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //signed-integer = - integer-literal
+    //signed-integer = '-' integer-literal
     tmp.left = 18;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 8));
@@ -1028,7 +1102,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_no_sign_signed_float;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //signed-float = + float-literal
+    //signed-float = '+' float-literal
     tmp.left = 19;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 7));
@@ -1036,7 +1110,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_signed_float;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //signed-float = - float-literal
+    //signed-float = '-' float-literal
     tmp.left = 19;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 8));
@@ -1070,6 +1144,38 @@ void Parser::grammar_init() {
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 20));
     tmp.process = &Parser::process_array_index;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //enum-list = enum-item
+    tmp.left = 22;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 23));
+    tmp.process = &Parser::process_single_enum_list;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //enum-list = enum-list ',' enum-item
+    tmp.left = 22;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 22));
+    tmp.right.push_back(Symbol(7, 1));
+    tmp.right.push_back(Symbol(-1, 23));
+    tmp.process = &Parser::process_enum_list;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //enum-item = identifier
+    tmp.left = 23;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.process = &Parser::process_enum_item;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //enum-item = identifier ':=' signed-integer
+    tmp.left = 23;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.right.push_back(Symbol(6, 1));
+    tmp.right.push_back(Symbol(-1, 18));
+    tmp.process = &Parser::process_enum_item;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }
