@@ -215,6 +215,7 @@ struct Type {
     std::string array_uprange, array_bias;
     std::vector<std::pair<int, std::string> > enum_list;
     std::vector<std::pair<int, Type*> > record_list;
+    bool is_base_type() const;
 };
 
 struct Symbol;

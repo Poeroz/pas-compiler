@@ -21,6 +21,10 @@ const std::string rtl_functions[46] = {"read", "readln", "readstr", "write", "wr
                                        "trunc", "include", "exclude", "fillchar", "fillbyte", "move"};
 const int num_terminal = 167;
 
+bool Type::is_base_type() const {
+    return category == 0 || (category == 1 && pointer_type->is_base_type()) || (category == 6 && named_type->is_base_type());
+}
+
 Token::Token() {}
 
 Token::Token(int category, int no, int line, int col, int pos, std::string content) :

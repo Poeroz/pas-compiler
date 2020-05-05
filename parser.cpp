@@ -304,7 +304,7 @@ std::string Parser::pas_basic_type_to_c(int type_no) const {
             return std::string("std::string ");
             break;
         case 37:
-            return std::string("char *");
+            return std::string("void ");
     }
     return std::string("");
 }
@@ -517,7 +517,7 @@ bool Parser::process_basic_type_denoter(Token &new_token) {
         new_token.type->category = 1;
         new_token.type->pointer_type = new Type;
         new_token.type->pointer_type->category = 0;
-        new_token.type->type_no = 31;
+        new_token.type->pointer_type->type_no = 37;
         return true;
     }
     new_token.type->category = 0;
