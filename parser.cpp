@@ -528,6 +528,13 @@ bool Parser::process_basic_type_denoter(Token &new_token) {
     return true;
 }
 
+bool Parser::process_pointer_type_denoter(Token &new_token) {
+    new_token.type = new Type;
+    new_token.type->category = 1;
+    new_token.type->pointer_type = parsing_stack.back().second.type;
+    return true;
+}
+
 bool Parser::process_array_type_denoter(Token &new_token) {
     new_token.type = parsing_stack[parsing_stack.size() - 4].second.type;
     Type *p = new_token.type;
@@ -944,6 +951,14 @@ void Parser::grammar_init() {
     tmp.right.clear();
     tmp.right.push_back(Symbol(1, 0));
     tmp.process = &Parser::process_basic_type_denoter;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //type-denoter = ^ type-denoter
+    tmp.left = 15;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(6, 14));
+    tmp.right.push_back(Symbol(-1, 15));
+    tmp.process = &Parser::process_pointer_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //type-denoter = array [ subrange-list ] of type-denoter
