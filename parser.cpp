@@ -322,9 +322,9 @@ std::string Parser::id_with_type(Type *type, std::string id) const {
             break;
         case 2:
             if (type->array_index_type == 0)
-                res = id + "[" + type->array_uprange + " - " + type->array_bias + "]";
+                res = id + "[" + type->array_uprange + " - " + type->array_bias + " + 1]";
             else
-                res = id + "['" + type->array_uprange + "' - '" + type->array_bias + "']";
+                res = id + "['" + type->array_uprange + "' - '" + type->array_bias + "' + 1]";
             res = id_with_type(type->array_type, res);
             break;
         case 6:
