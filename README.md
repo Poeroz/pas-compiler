@@ -1,4 +1,4 @@
-# Pascal-S语言编译程序的设计与实现
+# Pascal-S2C++ Compiler
 
-## 目标
-按照所给Pascal-S语言的语法，参考Pascal语言的语义，设计并实现Pascal-S语言的编译程序。
+## Introduction
+According to the syntax of Pascal-S and the semantics of Pascal, design and implement the compiler of Pascal-S.
