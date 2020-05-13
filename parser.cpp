@@ -591,6 +591,7 @@ bool Parser::process_id_type_denoter(Token &new_token) {
             output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier has not been defined");
         else
             output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier is not a type");
+        new_token.type = NULL;
         return false;
     }
     new_token.type = tmp;
@@ -669,6 +670,7 @@ bool Parser::process_record_type_denoter(Token &new_token) {
 bool Parser::process_set_type_denoter(Token &new_token) {
     if (! parsing_stack.back().second.type->can_be_defined_in_set()) {
         output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "illegal type declaration of set elements");
+        new_token.type = NULL;
         return false;
     }
     new_token.type = new Type;
@@ -692,10 +694,9 @@ bool Parser::process_array_subrange_list(Token &new_token) {
 }
 
 bool Parser::process_array_subrange(Token &new_token) {
-    if (! parsing_stack[parsing_stack.size() - 3].second.type || ! parsing_stack.back().second.type) {
-        new_token.type = NULL;
+    new_token.type = NULL;
+    if (! parsing_stack[parsing_stack.size() - 3].second.type || ! parsing_stack.back().second.type)
         return false;
-    }
     if (parsing_stack[parsing_stack.size() - 3].second.type->type_no <= 19) {
         if (! (parsing_stack.back().second.type->type_no <= 19)) {
             output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible type: expected int but found char");
@@ -831,6 +832,7 @@ bool Parser::process_array_index(Token &new_token) {
     }
     else {
         if (parsing_stack.back().second.type->type_no == 33 && parsing_stack.back().second.str_len != 1) {
+            new_token.type = NULL;
             output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible type");
             return false;
         }
