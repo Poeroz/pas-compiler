@@ -309,26 +309,37 @@ std::string Parser::pas_basic_type_to_c(int type_no) const {
     return std::string("");
 }
 
-std::string Parser::id_with_type(Type *type, std::string id, std::string struct_name) {
+std::string Parser::id_with_type(Type *type, std::vector<std::string> id_list, std::string struct_name) {
     std::string res = "";
     switch (type->category) {
         case 0:
             res = pas_basic_type_to_c(type->type_no);
-            res += id;
+            if (! id_list.empty()) {
+                for (int i = 0; i < id_list.size() - 1; i++)
+                    res += id_list[i] + ", ";
+                res += id_list.back();
+            }
             break;
         case 1:
-            res = "*";
-            res += id;
-            if (type->pointer_type->category == 2)
-                res = "(" + res + ")";
-            res = id_with_type(type->pointer_type, res);
+            for (int i = 0; i < id_list.size(); i++) {
+                std::string tmp = "*";
+                tmp += id_list[i];
+                if (type->pointer_type->category == 2)
+                    tmp = "(" + tmp + ")";
+                id_list[i] = tmp;
+            }
+            res = id_with_type(type->pointer_type, id_list);
             break;
         case 2:
-            if (type->array_index_type == 0)
-                res = id + "[" + type->array_uprange + " - " + type->array_bias + " + 1]";
-            else
-                res = id + "['" + type->array_uprange + "' - '" + type->array_bias + "' + 1]";
-            res = id_with_type(type->array_type, res);
+            for (int i = 0; i < id_list.size(); i++) {
+                std::string tmp = "";
+                if (type->array_index_type == 0)
+                    tmp = id_list[i] + "[" + type->array_uprange + " - " + type->array_bias + " + 1]";
+                else
+                    tmp = id_list[i] + "['" + type->array_uprange + "' - '" + type->array_bias + "' + 1]";
+                id_list[i] = tmp;
+            }
+            res = id_with_type(type->array_type, id_list);
             break;
         case 3:
             res = "enum {\n";
@@ -346,7 +357,12 @@ std::string Parser::id_with_type(Type *type, std::string id, std::string struct_
             indent--;
             for (int i = 0; i < indent; i++)
                 res += "\t";
-            res += "} " + id;
+            res += "} ";
+            if (! id_list.empty()) {
+                for (int i = 0; i < id_list.size() - 1; i++)
+                    res += id_list[i] + ", ";
+                res += id_list.back();
+            }
             break;
         case 4:
             res = "struct ";
@@ -357,18 +373,29 @@ std::string Parser::id_with_type(Type *type, std::string id, std::string struct_
             for (int i = 0; i < type->record_list.size(); i++) {
                 for (int j = 0; j < indent; j++)
                     res += "\t";
-                res += id_with_type(type->record_list[i].second, no_token[type->record_list[i].first]);
+                std::vector<std::string> tmp_id_list;
+                for (int j = 0; j < type->record_list[i].first.size(); j++)
+                    tmp_id_list.push_back(no_token[type->record_list[i].first[j]]);
+                res += id_with_type(type->record_list[i].second, tmp_id_list);
                 res += ";\n";
             }
             indent--;
             for (int i = 0; i < indent; i++)
                 res += "\t";
             res += "}";
-            if (id != "")
-                res += " " + id;
+            if (! id_list.empty()) {
+                for (int i = 0; i < id_list.size() - 1; i++)
+                    res += id_list[i] + ", ";
+                res += id_list.back();
+            }
             break;
         case 6:
-            res = no_token[type->named_id_no] + " " + id;
+            res = no_token[type->named_id_no] + " ";
+            if (! id_list.empty()) {
+                for (int i = 0; i < id_list.size() - 1; i++)
+                    res += id_list[i] + ", ";
+                res += id_list.back();
+            }
             break;
     }
     return res;
@@ -497,13 +524,15 @@ bool Parser::process_type_def(Token &new_token) {
     int id_no = parsing_stack[parsing_stack.size() - 4].second.type->named_id_no;
     Type *type = current_symbol_table->named_types[id_no];
     type->named_type = parsing_stack[parsing_stack.size() - 2].second.type;
+    std::vector<std::string> tmp;
     if (parsing_stack[parsing_stack.size() - 2].second.type->category != 4) {
         result << "typedef ";
-        result << id_with_type(parsing_stack[parsing_stack.size() - 2].second.type, no_token[id_no]);
+        tmp.push_back(no_token[id_no]);
+        result << id_with_type(parsing_stack[parsing_stack.size() - 2].second.type, tmp);
         result << ";\n";
     }
     else {
-        result << id_with_type(parsing_stack[parsing_stack.size() - 2].second.type, "", no_token[id_no]);
+        result << id_with_type(parsing_stack[parsing_stack.size() - 2].second.type, tmp, no_token[id_no]);
         result << ";\n";
     }
     return true;
@@ -819,10 +848,12 @@ bool Parser::process_single_field_list(Token &new_token) {
 bool Parser::process_field_list(Token &new_token) {
     new_token.type = parsing_stack[parsing_stack.size() - 3].second.type;
     for (int i = 0; i < new_token.type->record_list.size(); i++)
-        if (new_token.type->record_list[i].first == parsing_stack.back().second.type->record_list[0].first) {
-            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "duplicate identifier");
-            return false;
-        }
+        for (int j = 0; j < new_token.type->record_list[i].first.size(); j++)
+            for (int k = 0; k < parsing_stack.back().second.type->record_list[0].first.size(); k++)
+                if (new_token.type->record_list[i].first[j] == parsing_stack.back().second.type->record_list[0].first[k]) {
+                    output_error(parsing_stack.back().second.id_line[k], parsing_stack.back().second.id_col[k], parsing_stack.back().second.id_pos[k], "duplicate identifier");
+                    return false;
+                }
     new_token.type->record_list.push_back(parsing_stack.back().second.type->record_list[0]);
     delete parsing_stack.back().second.type;
     return true;
@@ -831,7 +862,30 @@ bool Parser::process_field_list(Token &new_token) {
 bool Parser::process_record_section(Token &new_token) {
     new_token.type = new Type;
     new_token.type->category = 4;
-    new_token.type->record_list.push_back(std::make_pair(parsing_stack[parsing_stack.size() - 3].second.no, parsing_stack.back().second.type));
+    new_token.type->record_list.push_back(std::make_pair(parsing_stack[parsing_stack.size() - 3].second.id_list, parsing_stack.back().second.type));
+    new_token.id_line = parsing_stack[parsing_stack.size() - 3].second.id_line;
+    new_token.id_col = parsing_stack[parsing_stack.size() - 3].second.id_col;
+    new_token.id_pos = parsing_stack[parsing_stack.size() - 3].second.id_pos;
+    return true;
+}
+
+bool Parser::process_single_id_list(Token &new_token) {
+    new_token.id_list.push_back(parsing_stack.back().second.no);
+    new_token.id_line.push_back(parsing_stack.back().second.line);
+    new_token.id_col.push_back(parsing_stack.back().second.col);
+    new_token.id_pos.push_back(parsing_stack.back().second.pos);
+    return true;
+}
+
+bool Parser::process_id_list(Token &new_token) {
+    new_token.id_list = parsing_stack[parsing_stack.size() - 3].second.id_list;
+    new_token.id_line = parsing_stack[parsing_stack.size() - 3].second.id_line;
+    new_token.id_col = parsing_stack[parsing_stack.size() - 3].second.id_col;
+    new_token.id_pos = parsing_stack[parsing_stack.size() - 3].second.id_pos;
+    new_token.id_list.push_back(parsing_stack.back().second.no);
+    new_token.id_line.push_back(parsing_stack.back().second.line);
+    new_token.id_col.push_back(parsing_stack.back().second.col);
+    new_token.id_pos.push_back(parsing_stack.back().second.pos);
     return true;
 }
 
@@ -878,7 +932,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //program-heading = 'program' identifier '(' identifier-list ')'
+    //program-heading = 'program' identifier '(' program-identifier-list ')'
     tmp.left = 3;
     tmp.right.clear();
     tmp.right.push_back(Symbol(0, 36));
@@ -889,14 +943,14 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //identifier-list = identifier
+    //program-identifier-list = identifier
     tmp.left = 5;
     tmp.right.clear();
     tmp.right.push_back(Symbol(2, 0));
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //identifier-list = identifier-list ',' identifier
+    //program-identifier-list = program-identifier-list ',' identifier
     tmp.left = 5;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 5));
@@ -1289,13 +1343,29 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_field_list;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //record-section = identifier ':' type-denoter
+    //record-section = identifier-list ':' type-denoter
     tmp.left = 26;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(2, 0));
+    tmp.right.push_back(Symbol(-1, 27));
     tmp.right.push_back(Symbol(7, 2));
     tmp.right.push_back(Symbol(-1, 16));
     tmp.process = &Parser::process_record_section;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //identifier-list = identifier
+    tmp.left = 27;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.process = &Parser::process_single_id_list;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //identifier-list = identifier-list ',' identifier
+    tmp.left = 27;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 27));
+    tmp.right.push_back(Symbol(7, 1));
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.process = &Parser::process_id_list;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }

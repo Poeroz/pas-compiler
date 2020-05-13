@@ -214,7 +214,7 @@ struct Type {
     int array_index_type; // int -- 0 char -- 1
     std::string array_uprange, array_bias;
     std::vector<std::pair<int, std::string> > enum_list;
-    std::vector<std::pair<int, Type*> > record_list;
+    std::vector<std::pair<std::vector<int>, Type*> > record_list;
     bool is_base_type() const;
 };
 
@@ -223,6 +223,7 @@ struct Symbol;
 struct Token {
     int category, no, line, col, pos;
     std::string content;
+    std::vector<int> id_list, id_line, id_col, id_pos;
     int str_len;
     Type *type;
     Token();
