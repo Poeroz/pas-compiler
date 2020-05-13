@@ -22,7 +22,15 @@ const std::string rtl_functions[46] = {"read", "readln", "readstr", "write", "wr
 const int num_terminal = 167;
 
 bool Type::is_base_type() const {
-    return category == 0 || (category == 1 && pointer_type->is_base_type()) || (category == 6 && named_type->is_base_type());
+    return category == 0 || category == 1 || (category == 6 && named_type->is_base_type());
+}
+
+bool Type::no_constructed_type() const {
+    return category == 0 || (category == 1 && pointer_type->no_constructed_type()) || category == 6;
+}
+
+bool Type::can_be_defined_in_set() const {
+    return category == 0 || (category == 1 && pointer_type->no_constructed_type()) || (category == 6 && named_type->is_base_type());
 }
 
 Token::Token() {}

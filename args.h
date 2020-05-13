@@ -216,6 +216,8 @@ struct Type {
     std::vector<std::pair<int, std::string> > enum_list;
     std::vector<std::pair<std::vector<int>, Type*> > record_list;
     bool is_base_type() const;
+    bool no_constructed_type() const;
+    bool can_be_defined_in_set() const;
 };
 
 struct Symbol;

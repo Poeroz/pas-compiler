@@ -47,6 +47,7 @@ private:
     bool process_array_type_denoter(Token &new_token);
     bool process_enum_type_denoter(Token &new_token);
     bool process_record_type_denoter(Token &new_token);
+    bool process_set_type_denoter(Token &new_token);
     bool process_array_single_subrange_list(Token &new_token);
     bool process_array_subrange_list(Token &new_token);
     bool process_array_subrange(Token &new_token);

@@ -9,7 +9,7 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 27;
+int Parser::num_nonterminal = 28;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
@@ -330,6 +330,8 @@ std::string Parser::id_with_type(Type *type, std::vector<std::string> id_list, s
                 id_list[i] = tmp;
             }
             res = id_with_type(type->pointer_type, id_list);
+            if (id_list.empty()) // for set definition
+                res += "*";
             break;
         case 2:
             for (int i = 0; i < id_list.size(); i++) {
@@ -385,6 +387,19 @@ std::string Parser::id_with_type(Type *type, std::vector<std::string> id_list, s
             for (int i = 0; i < indent; i++)
                 res += "\t";
             res += "}";
+            if (! id_list.empty()) {
+                res += " ";
+                for (int i = 0; i < id_list.size() - 1; i++)
+                    res += id_list[i] + ", ";
+                res += id_list.back();
+            }
+            break;
+        case 5:
+            {
+                std::vector<std::string> tmp;
+                res = id_with_type(type->set_type, tmp);
+            }
+            res = "std::set<" + res + ">";
             if (! id_list.empty()) {
                 res += " ";
                 for (int i = 0; i < id_list.size() - 1; i++)
@@ -642,6 +657,17 @@ bool Parser::process_record_type_denoter(Token &new_token) {
         new_token.type = parsing_stack[parsing_stack.size() - 2].second.type;
     else
         new_token.type = parsing_stack[parsing_stack.size() - 3].second.type;
+    return true;
+}
+
+bool Parser::process_set_type_denoter(Token &new_token) {
+    if (! parsing_stack.back().second.type->can_be_defined_in_set()) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "illegal type declaration of set elements");
+        return false;
+    }
+    new_token.type = new Type;
+    new_token.type->category = 5;
+    new_token.type->set_type = parsing_stack.back().second.type;
     return true;
 }
 
@@ -1198,6 +1224,15 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(7, 3));
     tmp.right.push_back(Symbol(0, 14));
     tmp.process = &Parser::process_record_type_denoter;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //type-denoter = set of type-denoter
+    tmp.left = 16;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 39));
+    tmp.right.push_back(Symbol(0, 30));
+    tmp.right.push_back(Symbol(-1, 16));
+    tmp.process = &Parser::process_set_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //subrange-list = subrange
