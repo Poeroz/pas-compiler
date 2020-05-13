@@ -1045,7 +1045,7 @@ void Parser::grammar_init() {
     tmp.right.clear();
     tmp.right.push_back(Symbol(0, 46));
     tmp.right.push_back(Symbol(-1, 13));
-    tmp.process = &Parser::process_default;
+    tmp.process = &Parser::process_newline;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //type-definitions = type-definition
