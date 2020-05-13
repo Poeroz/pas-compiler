@@ -683,6 +683,8 @@ bool Parser::process_array_subrange_list(Token &new_token) {
 }
 
 bool Parser::process_array_subrange(Token &new_token) {
+    if (! parsing_stack[parsing_stack.size() - 3].second.type || ! parsing_stack.back().second.type)
+        return false;
     if (parsing_stack[parsing_stack.size() - 3].second.type->type_no <= 19) {
         if (! (parsing_stack.back().second.type->type_no <= 19)) {
             output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible type: expected int but found char");
