@@ -30,7 +30,7 @@ private:
     std::pair<int, std::string> pas_int_to_c(int sign, std::string s) const;
     std::pair<int, std::string> pas_string_to_c(std::string s) const;
     std::string pas_basic_type_to_c(int type_no) const;
-    std::string id_with_type(Type *type, std::string id) const;
+    std::string id_with_type(Type *type, std::string id, std::string struct_name = "");
     bool process_default(Token &new_token);
     bool process_newline(Token &new_token);
     bool process_M1(Token &new_token);
@@ -40,11 +40,13 @@ private:
     bool process_string_constant_def(Token &new_token);
     bool process_bool_constant_def(Token &new_token);
     bool process_type_def(Token &new_token);
+    bool process_type_name(Token &new_token);
     bool process_id_type_denoter(Token &new_token);
     bool process_basic_type_denoter(Token &new_token);
     bool process_pointer_type_denoter(Token &new_token);
     bool process_array_type_denoter(Token &new_token);
     bool process_enum_type_denoter(Token &new_token);
+    bool process_record_type_denoter(Token &new_token);
     bool process_array_single_subrange_list(Token &new_token);
     bool process_array_subrange_list(Token &new_token);
     bool process_array_subrange(Token &new_token);
@@ -57,6 +59,9 @@ private:
     bool process_single_enum_list(Token &new_token);
     bool process_enum_list(Token &new_token);
     bool process_enum_item(Token &new_token);
+    bool process_single_field_list(Token &new_token);
+    bool process_field_list(Token &new_token);
+    bool process_record_section(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);

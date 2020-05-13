@@ -9,7 +9,7 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 24;
+int Parser::num_nonterminal = 27;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
@@ -309,7 +309,7 @@ std::string Parser::pas_basic_type_to_c(int type_no) const {
     return std::string("");
 }
 
-std::string Parser::id_with_type(Type *type, std::string id) const {
+std::string Parser::id_with_type(Type *type, std::string id, std::string struct_name) {
     std::string res = "";
     switch (type->category) {
         case 0:
@@ -332,8 +332,9 @@ std::string Parser::id_with_type(Type *type, std::string id) const {
             break;
         case 3:
             res = "enum {\n";
+            indent++;
             for (int i = 0; i < type->enum_list.size(); i++) {
-                for (int j = 0; j < indent + 1; j++)
+                for (int j = 0; j < indent; j++)
                     res += "\t";
                 res += no_token[type->enum_list[i].first];
                 if (type->enum_list[i].second != "")
@@ -342,7 +343,29 @@ std::string Parser::id_with_type(Type *type, std::string id) const {
                     res += ",";
                 res += "\n";
             }
+            indent--;
+            for (int i = 0; i < indent; i++)
+                res += "\t";
             res += "} " + id;
+            break;
+        case 4:
+            res = "struct ";
+            if (struct_name != "")
+                res += struct_name + " ";
+            res += "{\n";
+            indent++;
+            for (int i = 0; i < type->record_list.size(); i++) {
+                for (int j = 0; j < indent; j++)
+                    res += "\t";
+                res += id_with_type(type->record_list[i].second, no_token[type->record_list[i].first]);
+                res += ";\n";
+            }
+            indent--;
+            for (int i = 0; i < indent; i++)
+                res += "\t";
+            res += "}";
+            if (id != "")
+                res += " " + id;
             break;
         case 6:
             res = no_token[type->named_id_no] + " " + id;
@@ -471,7 +494,23 @@ bool Parser::process_bool_constant_def(Token &new_token) {
 }
 
 bool Parser::process_type_def(Token &new_token) {
-    int id_no = parsing_stack[parsing_stack.size() - 4].second.no;
+    int id_no = parsing_stack[parsing_stack.size() - 4].second.type->named_id_no;
+    Type *type = current_symbol_table->named_types[id_no];
+    type->named_type = parsing_stack[parsing_stack.size() - 2].second.type;
+    if (parsing_stack[parsing_stack.size() - 2].second.type->category != 4) {
+        result << "typedef ";
+        result << id_with_type(parsing_stack[parsing_stack.size() - 2].second.type, no_token[id_no]);
+        result << ";\n";
+    }
+    else {
+        result << id_with_type(parsing_stack[parsing_stack.size() - 2].second.type, "", no_token[id_no]);
+        result << ";\n";
+    }
+    return true;
+}
+
+bool Parser::process_type_name(Token &new_token) {
+    int id_no = parsing_stack.back().second.no;
     for (SymbolTable *p = current_symbol_table; p; p = p->parent)
         if (p->defined(id_no)) {
             output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "identifier has already been defined");
@@ -480,11 +519,9 @@ bool Parser::process_type_def(Token &new_token) {
     Type *type = new Type;
     type->category = 6;
     type->named_id_no = id_no;
-    type->named_type = parsing_stack[parsing_stack.size() - 2].second.type;
+    type->named_type = NULL;
     current_symbol_table->named_types[id_no] = type;
-    result << "typedef ";
-    result << id_with_type(parsing_stack[parsing_stack.size() - 2].second.type, no_token[id_no]);
-    result << ";\n";
+    new_token.type = type;
     return true;
 }
 
@@ -564,6 +601,14 @@ bool Parser::process_enum_type_denoter(Token &new_token) {
     new_token.type = parsing_stack[parsing_stack.size() - 2].second.type;
     for (int i = 0; i < new_token.type->enum_list.size(); i++)
         current_symbol_table->enum_items.insert(new_token.type->enum_list[i].first);
+    return true;
+}
+
+bool Parser::process_record_type_denoter(Token &new_token) {
+    if (parsing_stack[parsing_stack.size() - 2].second.category == -1)
+        new_token.type = parsing_stack[parsing_stack.size() - 2].second.type;
+    else
+        new_token.type = parsing_stack[parsing_stack.size() - 3].second.type;
     return true;
 }
 
@@ -766,6 +811,30 @@ bool Parser::process_enum_item(Token &new_token) {
     return true;
 }
 
+bool Parser::process_single_field_list(Token &new_token) {
+    new_token.type = parsing_stack.back().second.type;
+    return true;
+}
+
+bool Parser::process_field_list(Token &new_token) {
+    new_token.type = parsing_stack[parsing_stack.size() - 3].second.type;
+    for (int i = 0; i < new_token.type->record_list.size(); i++)
+        if (new_token.type->record_list[i].first == parsing_stack.back().second.type->record_list[0].first) {
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "duplicate identifier");
+            return false;
+        }
+    new_token.type->record_list.push_back(parsing_stack.back().second.type->record_list[0]);
+    delete parsing_stack.back().second.type;
+    return true;
+}
+
+bool Parser::process_record_section(Token &new_token) {
+    new_token.type = new Type;
+    new_token.type->category = 4;
+    new_token.type->record_list.push_back(std::make_pair(parsing_stack[parsing_stack.size() - 3].second.no, parsing_stack.back().second.type));
+    return true;
+}
+
 void Parser::grammar_init() {
     Generation tmp;
     //program' = program
@@ -926,7 +995,7 @@ void Parser::grammar_init() {
     tmp.right.clear();
     tmp.right.push_back(Symbol(2, 0));
     tmp.right.push_back(Symbol(6, 0));
-    tmp.right.push_back(Symbol(-1, 18));
+    tmp.right.push_back(Symbol(-1, 19));
     tmp.right.push_back(Symbol(7, 3));
     tmp.process = &Parser::process_int_constant_def;
     grammar.push_back(tmp);
@@ -936,7 +1005,7 @@ void Parser::grammar_init() {
     tmp.right.clear();
     tmp.right.push_back(Symbol(2, 0));
     tmp.right.push_back(Symbol(6, 0));
-    tmp.right.push_back(Symbol(-1, 19));
+    tmp.right.push_back(Symbol(-1, 20));
     tmp.right.push_back(Symbol(7, 3));
     tmp.process = &Parser::process_float_constant_def;
     grammar.push_back(tmp);
@@ -946,7 +1015,7 @@ void Parser::grammar_init() {
     tmp.right.clear();
     tmp.right.push_back(Symbol(2, 0));
     tmp.right.push_back(Symbol(6, 0));
-    tmp.right.push_back(Symbol(-1, 20));
+    tmp.right.push_back(Symbol(-1, 21));
     tmp.right.push_back(Symbol(7, 3));
     tmp.process = &Parser::process_string_constant_def;
     grammar.push_back(tmp);
@@ -994,93 +1063,119 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //type-definition = identifier '=' type-denoter ';'
+    //type-definition = type-name '=' type-denoter ';'
     tmp.left = 14;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(2, 0));
-    tmp.right.push_back(Symbol(6, 0));
     tmp.right.push_back(Symbol(-1, 15));
+    tmp.right.push_back(Symbol(6, 0));
+    tmp.right.push_back(Symbol(-1, 16));
     tmp.right.push_back(Symbol(7, 3));
     tmp.process = &Parser::process_type_def;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //type-denoter = identifier
+    //type-name = identifier
     tmp.left = 15;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.process = &Parser::process_type_name;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //type-denoter = identifier
+    tmp.left = 16;
     tmp.right.clear();
     tmp.right.push_back(Symbol(2, 0));
     tmp.process = &Parser::process_id_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //type-denoter = origin-type
-    tmp.left = 15;
+    tmp.left = 16;
     tmp.right.clear();
     tmp.right.push_back(Symbol(1, 0));
     tmp.process = &Parser::process_basic_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //type-denoter = '^' type-denoter
-    tmp.left = 15;
+    tmp.left = 16;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 14));
-    tmp.right.push_back(Symbol(-1, 15));
+    tmp.right.push_back(Symbol(-1, 16));
     tmp.process = &Parser::process_pointer_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //type-denoter = array '[' subrange-list ']' of type-denoter
-    tmp.left = 15;
+    tmp.left = 16;
     tmp.right.clear();
     tmp.right.push_back(Symbol(0, 1));
     tmp.right.push_back(Symbol(7, 6));
-    tmp.right.push_back(Symbol(-1, 16));
+    tmp.right.push_back(Symbol(-1, 17));
     tmp.right.push_back(Symbol(7, 7));
     tmp.right.push_back(Symbol(0, 30));
-    tmp.right.push_back(Symbol(-1, 15));
+    tmp.right.push_back(Symbol(-1, 16));
     tmp.process = &Parser::process_array_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //type-denoter = '(' enum-list ')'
-    tmp.left = 15;
+    tmp.left = 16;
     tmp.right.clear();
     tmp.right.push_back(Symbol(7, 4));
-    tmp.right.push_back(Symbol(-1, 22));
+    tmp.right.push_back(Symbol(-1, 23));
     tmp.right.push_back(Symbol(7, 5));
     tmp.process = &Parser::process_enum_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //subrange-list = subrange
+    //type-denoter = record field-list end
     tmp.left = 16;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(-1, 17));
+    tmp.right.push_back(Symbol(0, 37));
+    tmp.right.push_back(Symbol(-1, 25));
+    tmp.right.push_back(Symbol(0, 14));
+    tmp.process = &Parser::process_record_type_denoter;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //type-denoter = record field-list ';' end
+    tmp.left = 16;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 37));
+    tmp.right.push_back(Symbol(-1, 25));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.right.push_back(Symbol(0, 14));
+    tmp.process = &Parser::process_record_type_denoter;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //subrange-list = subrange
+    tmp.left = 17;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 18));
     tmp.process = &Parser::process_array_single_subrange_list;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //subrange-list = subrange ',' subrange-list
-    tmp.left = 16;
+    tmp.left = 17;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(-1, 17));
+    tmp.right.push_back(Symbol(-1, 18));
     tmp.right.push_back(Symbol(7, 1));
-    tmp.right.push_back(Symbol(-1, 16));
+    tmp.right.push_back(Symbol(-1, 17));
     tmp.process = &Parser::process_array_subrange_list;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //subrange = array-index '..' array-index
-    tmp.left = 17;
+    tmp.left = 18;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(-1, 21));
+    tmp.right.push_back(Symbol(-1, 22));
     tmp.right.push_back(Symbol(7, 8));
-    tmp.right.push_back(Symbol(-1, 21));
+    tmp.right.push_back(Symbol(-1, 22));
     tmp.process = &Parser::process_array_subrange;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //signed-integer = integer-literal
-    tmp.left = 18;
+    tmp.left = 19;
     tmp.right.clear();
     tmp.right.push_back(Symbol(3, 0));
     tmp.process = &Parser::process_no_sign_signed_integer;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //signed-integer = '+' integer-literal
-    tmp.left = 18;
+    tmp.left = 19;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 7));
     tmp.right.push_back(Symbol(3, 0));
@@ -1088,7 +1183,7 @@ void Parser::grammar_init() {
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //signed-integer = '-' integer-literal
-    tmp.left = 18;
+    tmp.left = 19;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 8));
     tmp.right.push_back(Symbol(3, 0));
@@ -1096,14 +1191,14 @@ void Parser::grammar_init() {
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //signed-float = float-literal
-    tmp.left = 19;
+    tmp.left = 20;
     tmp.right.clear();
     tmp.right.push_back(Symbol(4, 0));
     tmp.process = &Parser::process_no_sign_signed_float;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //signed-float = '+' float-literal
-    tmp.left = 19;
+    tmp.left = 20;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 7));
     tmp.right.push_back(Symbol(4, 0));
@@ -1111,7 +1206,7 @@ void Parser::grammar_init() {
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //signed-float = '-' float-literal
-    tmp.left = 19;
+    tmp.left = 20;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 8));
     tmp.right.push_back(Symbol(4, 0));
@@ -1119,63 +1214,88 @@ void Parser::grammar_init() {
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //string = string-literal
-    tmp.left = 20;
+    tmp.left = 21;
     tmp.right.clear();
     tmp.right.push_back(Symbol(5, 0));
     tmp.process = &Parser::process_string;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //array-index = identifier
-    tmp.left = 21;
+    tmp.left = 22;
     tmp.right.clear();
     tmp.right.push_back(Symbol(2, 0));
     tmp.process = &Parser::process_array_index;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //array-index = signed-integer
-    tmp.left = 21;
+    tmp.left = 22;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(-1, 18));
+    tmp.right.push_back(Symbol(-1, 19));
     tmp.process = &Parser::process_array_index;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //array-index = string
-    tmp.left = 21;
+    tmp.left = 22;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(-1, 20));
+    tmp.right.push_back(Symbol(-1, 21));
     tmp.process = &Parser::process_array_index;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //enum-list = enum-item
-    tmp.left = 22;
+    tmp.left = 23;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(-1, 23));
+    tmp.right.push_back(Symbol(-1, 24));
     tmp.process = &Parser::process_single_enum_list;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //enum-list = enum-list ',' enum-item
-    tmp.left = 22;
+    tmp.left = 23;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(-1, 22));
-    tmp.right.push_back(Symbol(7, 1));
     tmp.right.push_back(Symbol(-1, 23));
+    tmp.right.push_back(Symbol(7, 1));
+    tmp.right.push_back(Symbol(-1, 24));
     tmp.process = &Parser::process_enum_list;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //enum-item = identifier
-    tmp.left = 23;
+    tmp.left = 24;
     tmp.right.clear();
     tmp.right.push_back(Symbol(2, 0));
     tmp.process = &Parser::process_enum_item;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //enum-item = identifier ':=' signed-integer
-    tmp.left = 23;
+    tmp.left = 24;
     tmp.right.clear();
     tmp.right.push_back(Symbol(2, 0));
     tmp.right.push_back(Symbol(6, 1));
-    tmp.right.push_back(Symbol(-1, 18));
+    tmp.right.push_back(Symbol(-1, 19));
     tmp.process = &Parser::process_enum_item;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //field-list = record-section
+    tmp.left = 25;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 26));
+    tmp.process = &Parser::process_single_field_list;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //field-list = field-list ';' record-section
+    tmp.left = 25;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 25));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.right.push_back(Symbol(-1, 26));
+    tmp.process = &Parser::process_field_list;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //record-section = identifier ':' type-denoter
+    tmp.left = 26;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.right.push_back(Symbol(7, 2));
+    tmp.right.push_back(Symbol(-1, 16));
+    tmp.process = &Parser::process_record_section;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }
