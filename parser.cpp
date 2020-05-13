@@ -221,90 +221,90 @@ std::pair<int, std::string> Parser::pas_string_to_c(std::string s) const {
 std::string Parser::pas_basic_type_to_c(int type_no) const {
     switch (type_no) {
         case 0:
-            return std::string("uint8_t ");
+            return std::string("uint8_t");
             break;
         case 1:
-            return std::string("unsigned char ");
+            return std::string("unsigned char");
             break;
         case 2:
-            return std::string("uint16_t ");
+            return std::string("uint16_t");
             break;
         case 3:
-            return std::string("unsigned short ");
+            return std::string("unsigned short");
             break;
         case 4:
-            return std::string("uint32_t ");
+            return std::string("uint32_t");
             break;
         case 5:
         case 6:
         case 7:
-            return std::string("unsigned int ");
+            return std::string("unsigned int");
             break;
         case 8:
-            return std::string("unsigned long ");
+            return std::string("unsigned long");
             break;
         case 9:
-            return std::string("uint64_t ");
+            return std::string("uint64_t");
             break;
         case 10:
-            return std::string("unsigned long long ");
+            return std::string("unsigned long long");
             break;
         case 11:
-            return std::string("int8_t ");
+            return std::string("int8_t");
             break;
         case 12:
-            return std::string("char ");
+            return std::string("char");
             break;
         case 13:
-            return std::string("int16_t ");
+            return std::string("int16_t");
             break;
         case 14:
         case 15:
-            return std::string("short ");
+            return std::string("short");
             break;
         case 16:
-            return std::string("int32_t ");
+            return std::string("int32_t");
             break;
         case 17:
-            return std::string("int ");
+            return std::string("int");
             break;
         case 18:
-            return std::string("long ");
+            return std::string("long");
             break;
         case 19:
-            return std::string("int64_t ");
+            return std::string("int64_t");
             break;
         case 20:
         case 21:
-            return std::string("float ");
+            return std::string("float");
             break;
         case 22:
         case 23:
         case 25:
         case 26:
-            return std::string("double ");
+            return std::string("double");
             break;
         case 24:
-            return std::string("long double ");
+            return std::string("long double");
             break;
         case 27:
         case 28:
         case 29:
         case 30:
-            return std::string("bool ");
+            return std::string("bool");
             break;
         case 31:
-            return std::string("char ");
+            return std::string("char");
             break;
         case 32:
         case 33:
         case 34:
         case 35:
         case 36:
-            return std::string("std::string ");
+            return std::string("std::string");
             break;
         case 37:
-            return std::string("void ");
+            return std::string("void");
     }
     return std::string("");
 }
@@ -315,6 +315,7 @@ std::string Parser::id_with_type(Type *type, std::vector<std::string> id_list, s
         case 0:
             res = pas_basic_type_to_c(type->type_no);
             if (! id_list.empty()) {
+                res += " ";
                 for (int i = 0; i < id_list.size() - 1; i++)
                     res += id_list[i] + ", ";
                 res += id_list.back();
@@ -357,8 +358,9 @@ std::string Parser::id_with_type(Type *type, std::vector<std::string> id_list, s
             indent--;
             for (int i = 0; i < indent; i++)
                 res += "\t";
-            res += "} ";
+            res += "}";
             if (! id_list.empty()) {
+                res += " ";
                 for (int i = 0; i < id_list.size() - 1; i++)
                     res += id_list[i] + ", ";
                 res += id_list.back();
@@ -384,14 +386,16 @@ std::string Parser::id_with_type(Type *type, std::vector<std::string> id_list, s
                 res += "\t";
             res += "}";
             if (! id_list.empty()) {
+                res += " ";
                 for (int i = 0; i < id_list.size() - 1; i++)
                     res += id_list[i] + ", ";
                 res += id_list.back();
             }
             break;
         case 6:
-            res = no_token[type->named_id_no] + " ";
+            res = no_token[type->named_id_no];
             if (! id_list.empty()) {
+                res += " ";
                 for (int i = 0; i < id_list.size() - 1; i++)
                     res += id_list[i] + ", ";
                 res += id_list.back();
