@@ -543,6 +543,8 @@ bool Parser::process_type_def(Token &new_token) {
     int id_no = parsing_stack[parsing_stack.size() - 4].second.type->named_id_no;
     Type *type = current_symbol_table->named_types[id_no];
     type->named_type = parsing_stack[parsing_stack.size() - 2].second.type;
+    if (! type->named_type)
+        return false;
     std::vector<std::string> tmp;
     if (parsing_stack[parsing_stack.size() - 2].second.type->category != 4) {
         result << "typedef ";
@@ -640,8 +642,12 @@ bool Parser::process_pointer_type_denoter(Token &new_token) {
 bool Parser::process_array_type_denoter(Token &new_token) {
     new_token.type = parsing_stack[parsing_stack.size() - 4].second.type;
     Type *p = new_token.type;
-    for (; p->array_type; p = p->array_type);
-    p->array_type = parsing_stack.back().second.type;
+    if (p) {
+        for (; p->array_type; p = p->array_type);
+        p->array_type = parsing_stack.back().second.type;
+    }
+    else
+        return false;
     return true;
 }
 
@@ -678,13 +684,18 @@ bool Parser::process_array_single_subrange_list(Token &new_token) {
 
 bool Parser::process_array_subrange_list(Token &new_token) {
     new_token.type = parsing_stack[parsing_stack.size() - 3].second.type;
-    new_token.type->array_type = parsing_stack.back().second.type;
+    if (new_token.type)
+        new_token.type->array_type = parsing_stack.back().second.type;
+    else
+        return false;
     return true;
 }
 
 bool Parser::process_array_subrange(Token &new_token) {
-    if (! parsing_stack[parsing_stack.size() - 3].second.type || ! parsing_stack.back().second.type)
+    if (! parsing_stack[parsing_stack.size() - 3].second.type || ! parsing_stack.back().second.type) {
+        new_token.type = NULL;
         return false;
+    }
     if (parsing_stack[parsing_stack.size() - 3].second.type->type_no <= 19) {
         if (! (parsing_stack.back().second.type->type_no <= 19)) {
             output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible type: expected int but found char");
