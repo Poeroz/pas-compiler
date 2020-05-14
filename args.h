@@ -226,7 +226,11 @@ struct Token {
     int category, no, line, col, pos;
     std::string content;
     std::vector<int> id_list, id_line, id_col, id_pos;
-    int str_len;
+    union {
+        int str_len;
+        int array_len;
+    };
+    std::unordered_set<int> record_defined_ids;
     Type *type;
     Token();
     Token(int category, int no, int line = 1, int col = 1, int pos = 0, std::string content = "");
