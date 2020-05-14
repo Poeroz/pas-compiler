@@ -1182,7 +1182,7 @@ bool Parser::process_var_type_declar(Token &new_token) {
     std::vector<std::string> tmp;
     for (int i = 0; i < parsing_stack[parsing_stack.size() - 3].second.id_list.size(); i++)
         tmp.push_back(no_token[parsing_stack[parsing_stack.size() - 3].second.id_list[i]]);
-    result << id_with_type(parsing_stack.back().second.type, tmp);
+    result << id_with_type(new_token.type, tmp);
     return true;
 }
 
