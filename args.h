@@ -229,6 +229,7 @@ struct Token {
     union {
         int str_len;
         int array_len;
+        int id_num;
     };
     std::unordered_set<int> record_defined_ids;
     Type *type;

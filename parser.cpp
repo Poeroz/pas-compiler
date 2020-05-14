@@ -1165,23 +1165,34 @@ bool Parser::process_record_field_split(Token &new_token) {
 }
 
 bool Parser::process_var_type_declar(Token &new_token) {
-    int id_no = parsing_stack[parsing_stack.size() - 3].second.no;
-    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
-        if (p->defined(id_no)) {
-            output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "identifier has already been defined");
-            return false;
-        }
-    current_symbol_table->symbols[id_no] = parsing_stack.back().second.type;
+    bool flag = true;
+    for (int i = 0; i < parsing_stack[parsing_stack.size() - 3].second.id_list.size(); i++) {
+        for (SymbolTable *p = current_symbol_table; p; p = p->parent)
+            if (p->defined(parsing_stack[parsing_stack.size() - 3].second.id_list[i])) {
+                output_error(parsing_stack[parsing_stack.size() - 3].second.id_line[i], parsing_stack[parsing_stack.size() - 3].second.id_col[i], parsing_stack[parsing_stack.size() - 3].second.id_pos[i], "identifier has already been defined");
+                flag = false;
+            }
+        if (flag)
+            current_symbol_table->symbols[parsing_stack[parsing_stack.size() - 3].second.id_list[i]] = parsing_stack.back().second.type;
+    }
+    if (! flag)
+        return false;
     new_token.type = parsing_stack.back().second.type;
+    new_token.id_num = parsing_stack[parsing_stack.size() - 3].second.id_list.size();
     std::vector<std::string> tmp;
-    tmp.push_back(no_token[id_no]);
-    result << id_with_type(new_token.type, tmp);
+    for (int i = 0; i < parsing_stack[parsing_stack.size() - 3].second.id_list.size(); i++)
+        tmp.push_back(no_token[parsing_stack[parsing_stack.size() - 3].second.id_list[i]]);
+    result << id_with_type(parsing_stack.back().second.type, tmp);
     return true;
 }
 
 bool Parser::process_M5(Token &new_token) {
     new_token.type = parsing_stack[parsing_stack.size() - 2].second.type;
     for (; new_token.type && new_token.type->category == 6; new_token.type = new_token.type->named_type);
+    if (parsing_stack[parsing_stack.size() - 2].second.id_num != 1) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "too many variables");
+        return false;
+    }
     result << " = ";
     return true;
 }
@@ -1892,10 +1903,10 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_semicolon_newline;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //var-type-declarification = identifier ':' type-denoter
+    //var-type-declarification = identifier-list ':' type-denoter
     tmp.left = 42;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(2, 0));
+    tmp.right.push_back(Symbol(-1, 27));
     tmp.right.push_back(Symbol(7, 2));
     tmp.right.push_back(Symbol(-1, 16));
     tmp.process = &Parser::process_var_type_declar;
