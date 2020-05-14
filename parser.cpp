@@ -9,7 +9,7 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 39;
+int Parser::num_nonterminal = 44;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
@@ -545,7 +545,7 @@ bool Parser::process_bool_constant_def(Token &new_token) {
     return true;
 }
 
-bool Parser::process_typed_constant_def(Token &new_token) {
+bool Parser::process_semicolon_newline(Token &new_token) {
     result << ";\n";
     return true;
 }
@@ -1164,6 +1164,28 @@ bool Parser::process_record_field_split(Token &new_token) {
     return true;
 }
 
+bool Parser::process_var_type_declar(Token &new_token) {
+    int id_no = parsing_stack[parsing_stack.size() - 3].second.no;
+    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
+        if (p->defined(id_no)) {
+            output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "identifier has already been defined");
+            return false;
+        }
+    current_symbol_table->symbols[id_no] = parsing_stack.back().second.type;
+    new_token.type = parsing_stack.back().second.type;
+    std::vector<std::string> tmp;
+    tmp.push_back(no_token[id_no]);
+    result << id_with_type(new_token.type, tmp);
+    return true;
+}
+
+bool Parser::process_M5(Token &new_token) {
+    new_token.type = parsing_stack[parsing_stack.size() - 2].second.type;
+    for (; new_token.type && new_token.type->category == 6; new_token.type = new_token.type->named_type);
+    result << " = ";
+    return true;
+}
+
 void Parser::grammar_init() {
     Generation tmp;
     //program' = program
@@ -1268,6 +1290,14 @@ void Parser::grammar_init() {
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 6));
     tmp.right.push_back(Symbol(-1, 12));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //definition-part = definition-part variable-definition-part
+    tmp.left = 6;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 6));
+    tmp.right.push_back(Symbol(-1, 39));
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
@@ -1377,7 +1407,7 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(-1, 29));
     tmp.right.push_back(Symbol(-1, 30));
     tmp.right.push_back(Symbol(7, 3));
-    tmp.process = &Parser::process_typed_constant_def;
+    tmp.process = &Parser::process_semicolon_newline;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //type-definition-part = 'type' type-definitions
@@ -1818,6 +1848,63 @@ void Parser::grammar_init() {
     tmp.right.clear();
     tmp.right.push_back(Symbol(7, 3));
     tmp.process = &Parser::process_record_field_split;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //variable-definition-part = 'var' var-definitions
+    tmp.left = 39;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 50));
+    tmp.right.push_back(Symbol(-1, 40));
+    tmp.process = &Parser::process_newline;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //var-definitions = var-definition
+    tmp.left = 40;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 41));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //var-definitions = var-definitions var-definition
+    tmp.left = 40;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 40));
+    tmp.right.push_back(Symbol(-1, 41));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //var-definition = var-type-declarification ';'
+    tmp.left = 41;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 42));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.process = &Parser::process_semicolon_newline;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //var-definition = var-type-declarification '=' M5 const-val ';'
+    tmp.left = 41;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 42));
+    tmp.right.push_back(Symbol(6, 0));
+    tmp.right.push_back(Symbol(-1, 43));
+    tmp.right.push_back(Symbol(-1, 30));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.process = &Parser::process_semicolon_newline;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //var-type-declarification = identifier ':' type-denoter
+    tmp.left = 42;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.right.push_back(Symbol(7, 2));
+    tmp.right.push_back(Symbol(-1, 16));
+    tmp.process = &Parser::process_var_type_declar;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M5 = ε
+    tmp.left = 43;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M5;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }

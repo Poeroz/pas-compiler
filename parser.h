@@ -33,13 +33,13 @@ private:
     std::string id_with_type(Type *type, std::vector<std::string> id_list, std::string struct_name = "");
     bool process_default(Token &new_token);
     bool process_newline(Token &new_token);
+    bool process_semicolon_newline(Token &new_token);
     bool process_M1(Token &new_token);
     bool process_label(Token &new_token);
     bool process_int_constant_def(Token &new_token);
     bool process_float_constant_def(Token &new_token);
     bool process_string_constant_def(Token &new_token);
     bool process_bool_constant_def(Token &new_token);
-    bool process_typed_constant_def(Token &new_token);
     bool process_type_def(Token &new_token);
     bool process_type_name(Token &new_token);
     bool process_id_type_denoter(Token &new_token);
@@ -81,6 +81,8 @@ private:
     bool process_single_record_field_val_split(Token &new_token);
     bool process_record_field_val_split(Token &new_token);
     bool process_record_field_split(Token &new_token);
+    bool process_var_type_declar(Token &new_token);
+    bool process_M5(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);
