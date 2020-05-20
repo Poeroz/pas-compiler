@@ -31,6 +31,8 @@ private:
     std::pair<int, std::string> pas_string_to_c(std::string s) const;
     std::string pas_basic_type_to_c(int type_no) const;
     std::string id_with_type(Type *type, std::vector<std::string> id_list, std::string struct_name = "");
+    bool type_match(Type *a, Type *b, int match_type = 1) const; // 0 -- exclusive 1 -- match
+    bool functype_match(FuncType *a, FuncType *b, int match_type = 1) const; // 0 -- exclusive 1 -- match
     bool process_default(Token &new_token);
     bool process_newline(Token &new_token);
     bool process_semicolon_newline(Token &new_token);
@@ -83,6 +85,16 @@ private:
     bool process_record_field_split(Token &new_token);
     bool process_var_type_declar(Token &new_token);
     bool process_M5(Token &new_token);
+    bool process_proc_func_declar(Token &new_token);
+    bool process_procedure_heading(Token &new_token);
+    bool process_function_heading(Token &new_token);
+    bool process_formal_parameter_spec(Token &new_token);
+    bool process_formal_parameter_spec_var(Token &new_token);
+    bool process_formal_parameter_spec_const(Token &new_token);
+    bool process_id_type_identifier(Token &new_token);
+    bool process_basic_type_identifier(Token &new_token);
+    bool process_array_type_identifier(Token &new_token);
+    bool process_M6(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);

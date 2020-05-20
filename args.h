@@ -69,6 +69,7 @@
         51: while
         52: with
         53: xor
+        54: forward
     1: data types
         0: uint8
         1: byte
@@ -211,13 +212,20 @@ struct Type {
         Type* set_type;
         Type* named_type;
     };
-    int array_index_type; // int -- 0 char -- 1
+    int array_index_type; // int -- 0 char -- 1 no_index -- -1
     std::string array_uprange, array_bias;
     std::vector<std::pair<int, std::string> > enum_list;
     std::vector<std::pair<std::vector<int>, Type*> > record_list;
     bool is_base_type() const;
     bool no_constructed_type() const;
     bool can_be_defined_in_set() const;
+};
+
+struct FuncType {
+    int id_no;
+    Type* ret_type; // NULL -- procedure
+    std::vector<std::pair<int, std::pair<int, Type*> > > param_list; // 0 -- ordinal 1 -- ref 2 -- const
+    bool defined;
 };
 
 struct Symbol;
@@ -256,15 +264,17 @@ struct Symbol {
 
 struct SymbolTable {
     SymbolTable* parent;
+    FuncType *functype; //for procedures and functions
     std::unordered_set<std::string> labels;
     std::unordered_map<int, Type*> named_types;
     std::unordered_map<int, Type*> symbols;
     std::unordered_map<int, bool> is_const;
     std::unordered_map<int, std::string> const_val; //for integers, floats and strings
     std::unordered_map<int, int> const_strlen; //for const strings
-    std::unordered_map<int, SymbolTable*> subtable;
+    std::unordered_map<int, std::vector<SymbolTable*> > subtable;
     std::unordered_set<int> enum_items;
     bool defined(int no) const;
+    bool defined_except_func(int no) const;
 };
 
 extern const int num_keywords, num_data_types, num_rtl_functions, num_operators, num_symbols;

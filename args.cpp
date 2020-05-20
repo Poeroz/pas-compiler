@@ -3,13 +3,13 @@
 #include <iostream>
 #include "args.h"
 
-const int num_keywords = 54, num_data_types = 38, num_rtl_functions = 46, num_operators = 16, num_symbols = 9;
-const std::string keywords[54] = {"and", "array", "asm", "begin", "break", "case", "const", "constructor", "continue", "destructor",
+const int num_keywords = 55, num_data_types = 38, num_rtl_functions = 46, num_operators = 16, num_symbols = 9;
+const std::string keywords[55] = {"and", "array", "asm", "begin", "break", "case", "const", "constructor", "continue", "destructor",
                                   "div", "do", "downto", "else", "end", "false", "file", "for", "function", "goto",
                                   "if", "implementation", "in", "inline", "interface", "label", "mod", "nil", "not", "object",
                                   "of", "on", "operator", "or", "packed", "procedure", "program", "record", "repeat", "set",
                                   "shl", "shr", "string", "then", "to", "true", "type", "unit", "until", "uses",
-                                  "var", "while", "whith", "xor"};
+                                  "var", "while", "whith", "xor", "forward"};
 const std::string data_types[38] = {"uint8", "byte", "uint16", "word", "uint32", "longword", "dword", "cardinal", "nativeuint", "uint64",
                                     "qword", "int8", "shortint", "int16", "smallint", "integer", "int32", "longint", "nativeint", "int64",
                                     "single", "real", "real48", "double", "extended", "comp", "currency", "boolean", "bytebool", "wordbool",
@@ -19,7 +19,7 @@ const std::string rtl_functions[46] = {"read", "readln", "readstr", "write", "wr
                                        "stringofchar", "upcase", "val", "abs", "arctan", "cos", "dec", "exp", "frac", "inc",
                                        "int", "ln", "odd", "pi", "random", "randomize", "round", "sin", "sqr", "sqrt",
                                        "trunc", "include", "exclude", "fillchar", "fillbyte", "move"};
-const int num_terminal = 167;
+const int num_terminal = 168;
 
 bool Type::is_base_type() const {
     return category == 0 || category == 1 || (category == 6 && named_type->is_base_type());
@@ -62,6 +62,10 @@ bool Symbol::operator == (const Symbol &_) const {
 
 bool SymbolTable::defined(int no) const {
     return named_types.count(no) || symbols.count(no) || subtable.count(no) || enum_items.count(no);
+}
+
+bool SymbolTable::defined_except_func(int no) const {
+    return named_types.count(no) || symbols.count(no) || enum_items.count(no);
 }
 
 std::string INPUT_FILE_NAME = "";

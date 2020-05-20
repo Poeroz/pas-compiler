@@ -9,7 +9,7 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 44;
+int Parser::num_nonterminal = 53;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
@@ -298,9 +298,7 @@ std::string Parser::pas_basic_type_to_c(int type_no) const {
             break;
         case 32:
         case 33:
-        case 34:
         case 35:
-        case 36:
             return std::string("std::string");
             break;
         case 37:
@@ -338,10 +336,13 @@ std::string Parser::id_with_type(Type *type, std::vector<std::string> id_list, s
         case 2:
             for (int i = 0; i < id_list.size(); i++) {
                 std::string tmp = "";
-                if (type->array_index_type == 0)
-                    tmp = id_list[i] + "[" + type->array_uprange + " - " + type->array_bias + " + 1]";
+                if (type->array_index_type == -1)
+                    tmp = id_list[i] + "[]";
                 else
-                    tmp = id_list[i] + "['" + type->array_uprange + "' - '" + type->array_bias + "' + 1]";
+                    if (type->array_index_type == 0)
+                        tmp = id_list[i] + "[" + type->array_uprange + " - " + type->array_bias + " + 1]";
+                    else
+                        tmp = id_list[i] + "['" + type->array_uprange + "' - '" + type->array_bias + "' + 1]";
                 id_list[i] = tmp;
             }
             res = id_with_type(type->array_type, id_list);
@@ -422,6 +423,115 @@ std::string Parser::id_with_type(Type *type, std::vector<std::string> id_list, s
     return res;
 }
 
+// 0--exclusive 1--match
+
+bool Parser::type_match(Type *a, Type *b, int match_type) const {
+    for (; a && a->category == 6; a = a->named_type);
+    for (; b && b->category == 6; b = b->named_type);
+    if (! a || ! b)
+        return false;
+    if (a->category != b->category)
+        return false;
+    if (a->category == 0) {
+        if (a->type_no >= 0 && a->type_no <= 1 && b->type_no >= 0 && b->type_no <= 1)
+            return true;
+        if (a->type_no >= 2 && a->type_no <= 3 && b->type_no >= 2 && b->type_no <= 3)
+            return true;
+        if (a->type_no >= 4 && a->type_no <= 7 && b->type_no >= 4 && b->type_no <= 7)
+            return true;
+        if (a->type_no == 8 && b->type_no == 8)
+            return true;
+        if (a->type_no >= 9 && a->type_no <= 10 && b->type_no >= 9 && b->type_no <= 10)
+            return true;
+        if (a->type_no >= 13 && a->type_no <= 15 && b->type_no >= 13 && b->type_no <= 15)
+            return true;
+        if (a->type_no >= 16 && a->type_no <= 17 && b->type_no >= 16 && b->type_no <= 17)
+            return true;
+        if (a->type_no == 18 && b->type_no == 18)
+            return true;
+        if (a->type_no == 19 && b->type_no == 19)
+            return true;
+        if (match_type) {
+            if (a->type_no >= 11 && a->type_no <= 12 && b->type_no >= 11 && b->type_no <= 12)
+                return true;
+            for (int i = 20; i <= 37; i++)
+                if (a->type_no == b->type_no)
+                    return true;
+        }
+        else {
+            if ((a->type_no == 11 || a->type_no == 12 || a->type_no == 31) && (b->type_no == 11 || b->type_no == 12 || b->type_no == 31))
+                return true;
+            if (a->type_no >= 20 && a->type_no <= 21)
+                return true;
+            if ((a->type_no == 22 || a->type_no == 23 || a->type_no == 25 || a->type_no == 26) && (b->type_no == 22 || b->type_no == 23 || b->type_no == 25 || b->type_no == 26))
+                return true;
+            if (a->type_no == 24 && b->type_no == 24)
+                return true;
+            if (a->type_no >= 27 && a->type_no <= 30 && b->type_no >= 27 && b->type_no <= 30)
+                return true;
+            if ((a->type_no == 32 || a->type_no == 33 || a->type_no == 35) && (b->type_no == 32 || b->type_no == 33 || b->type_no == 35))
+                return true;
+            if ((a->type_no == 34 || a->type_no == 36) && (b->type_no == 34 || b->type_no == 36))
+                return true;
+        }
+        return false;
+    }
+    if (a->category == 1)
+        return type_match(a->pointer_type, b->pointer_type, match_type);
+    if (a->category == 2)
+        if (! match_type)
+            return type_match(a->array_type, b->array_type, 0);
+        else {
+            if (a->array_index_type != b->array_index_type)
+                return false;
+            if (a->array_index_type == 0) {
+                if (std::stoi(a->array_bias, 0, 0) != std::stoi(b->array_bias, 0, 0))
+                    return false;
+                if (std::stoi(a->array_uprange, 0, 0) != std::stoi(b->array_uprange, 0, 0))
+                    return false;
+            }
+            if (a->array_index_type == 1) {
+                char tmp[10];
+                sprintf(tmp, a->array_bias.c_str());
+                int tmpa = tmp[0];
+                sprintf(tmp, b->array_bias.c_str());
+                int tmpb = tmp[0];
+                if (tmpa != tmpb)
+                    return false;
+                sprintf(tmp, a->array_uprange.c_str());
+                tmpa = tmp[0];
+                sprintf(tmp, b->array_uprange.c_str());
+                tmpb = tmp[0];
+                if (tmpa != tmpb)
+                    return false;
+            }
+            return type_match(a->array_type, b->array_type, 1);
+        }
+    if (a->category == 3 || a->category == 4)
+        return a == b;
+    if (a->category == 5)
+        return type_match(a->set_type, b->set_type, match_type);
+    return false;
+}
+
+bool Parser::functype_match(FuncType *a, FuncType *b, int match_type) const {
+    if (a->id_no != b->id_no)
+        return false;
+    if (match_type && ! type_match(a->ret_type, b->ret_type, 1))
+        return false;
+    if (a->param_list.size() != b->param_list.size())
+        return false;
+    for (int i = 0; i < a->param_list.size(); i++) {
+        if (match_type && a->param_list[i].first != b->param_list[i].first)
+            return false;
+        if (match_type && a->param_list[i].second.first != b->param_list[i].second.first)
+            return false;
+        if (! type_match(a->param_list[i].second.second, b->param_list[i].second.second, match_type))
+            return false;
+    }
+    return true;
+}
+
 bool Parser::process_default(Token &new_token) {
     return true;
 }
@@ -453,11 +563,10 @@ bool Parser::process_label(Token &new_token) {
 
 bool Parser::process_int_constant_def(Token &new_token) {
     int id_no = parsing_stack[parsing_stack.size() - 4].second.no;
-    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
-        if (p->defined(id_no)) {
-            output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "identifier has already been defined");
-            return false;
-        }
+    if (current_symbol_table->defined(id_no)) {
+        output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "identifier has already been defined");
+        return false;
+    }
     for (int i = 0; i < indent; i++)
         result << "\t";
     result << "const ";
@@ -490,11 +599,10 @@ bool Parser::process_int_constant_def(Token &new_token) {
 
 bool Parser::process_float_constant_def(Token &new_token) {
     int id_no = parsing_stack[parsing_stack.size() - 4].second.no;
-    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
-        if (p->defined(id_no)) {
-            output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "identifier has already been defined");
-            return false;
-        }
+    if (current_symbol_table->defined(id_no)) {
+        output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "identifier has already been defined");
+        return false;
+    }
     std::string constant = parsing_stack[parsing_stack.size() - 2].second.content;
     for (int i = 0; i < indent; i++)
         result << "\t";
@@ -508,11 +616,10 @@ bool Parser::process_float_constant_def(Token &new_token) {
 
 bool Parser::process_string_constant_def(Token &new_token) {
     int id_no = parsing_stack[parsing_stack.size() - 4].second.no;
-    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
-        if (p->defined(id_no)) {
-            output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "identifier has already been defined");
-            return false;
-        }
+    if (current_symbol_table->defined(id_no)) {
+        output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "identifier has already been defined");
+        return false;
+    }
     for (int i = 0; i < indent; i++)
         result << "\t";
     result << "const std::string " << no_token[id_no] << " = \"" << parsing_stack[parsing_stack.size() - 2].second.content << "\";\n";
@@ -525,11 +632,10 @@ bool Parser::process_string_constant_def(Token &new_token) {
 
 bool Parser::process_bool_constant_def(Token &new_token) {
     int id_no = parsing_stack[parsing_stack.size() - 4].second.no;
-    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
-        if (p->defined(id_no)) {
-            output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "identifier has already been defined");
-            return false;
-        }
+    if (current_symbol_table->defined(id_no)) {
+        output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "identifier has already been defined");
+        return false;
+    }
     Type *type = new Type;
     type->category = 0;
     type->type_no = 27;
@@ -557,6 +663,8 @@ bool Parser::process_type_def(Token &new_token) {
     if (! type->named_type)
         return false;
     std::vector<std::string> tmp;
+    for (int i = 0; i < indent; i++)
+        result << "\t";
     if (parsing_stack[parsing_stack.size() - 2].second.type->category != 4) {
         result << "typedef ";
         tmp.push_back(no_token[id_no]);
@@ -572,11 +680,10 @@ bool Parser::process_type_def(Token &new_token) {
 
 bool Parser::process_type_name(Token &new_token) {
     int id_no = parsing_stack.back().second.no;
-    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
-        if (p->defined(id_no)) {
-            output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "identifier has already been defined");
-            return false;
-        }
+    if (current_symbol_table->defined(id_no)) {
+        output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "identifier has already been defined");
+        return false;
+    }
     Type *type = new Type;
     type->category = 6;
     type->named_id_no = id_no;
@@ -619,6 +726,13 @@ bool Parser::process_basic_type_denoter(Token &new_token) {
         new_token.type->pointer_type->type_no = 37;
         return true;
     }
+    if (id_no == 34 || id_no == 36) {
+        new_token.type->category = 1;
+        new_token.type->pointer_type = new Type;
+        new_token.type->pointer_type->category = 0;
+        new_token.type->pointer_type->type_no = 33;
+        return true;
+    }
     new_token.type->category = 0;
     if (id_no >= 6 && id_no <= 8)
         id_no = 5;
@@ -635,11 +749,8 @@ bool Parser::process_basic_type_denoter(Token &new_token) {
                     if (id_no >= 28 && id_no <= 30)
                         id_no = 27;
                     else
-                        if (id_no == 32)
+                        if (id_no == 32 || id_no == 35)
                             id_no = 33;
-                        else
-                            if (id_no >= 34 && id_no <= 36)
-                                id_no = 33;
     new_token.type->type_no = id_no;
     return true;
 }
@@ -879,19 +990,17 @@ bool Parser::process_enum_item(Token &new_token) {
     new_token.type->category = 3;
     std::pair<int, std::string> enum_item;
     if (parsing_stack.back().second.category == 2) {
-        for (SymbolTable *p = current_symbol_table; p; p = p->parent)
-            if (p->defined(parsing_stack.back().second.no)) {
-                output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier has already been defined");
-                return false;
-            }
+        if (current_symbol_table->defined(parsing_stack.back().second.no)) {
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier has already been defined");
+            return false;
+        }
         enum_item = std::make_pair(parsing_stack.back().second.no, "");
     }
     else {
-        for (SymbolTable *p = current_symbol_table; p; p = p->parent)
-            if (p->defined(parsing_stack[parsing_stack.size() - 3].second.no)) {
-                output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "identifier has already been defined");
-                return false;
-            }
+        if (current_symbol_table->defined(parsing_stack[parsing_stack.size() - 3].second.no)) {
+            output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "identifier has already been defined");
+            return false;
+        }
         enum_item = std::make_pair(parsing_stack[parsing_stack.size() - 3].second.no, parsing_stack.back().second.content);
     }
     new_token.type->enum_list.push_back(enum_item);
@@ -905,15 +1014,18 @@ bool Parser::process_single_field_list(Token &new_token) {
 
 bool Parser::process_field_list(Token &new_token) {
     new_token.type = parsing_stack[parsing_stack.size() - 3].second.type;
+    bool flag = true;
     for (int i = 0; i < new_token.type->record_list.size(); i++)
         for (int j = 0; j < new_token.type->record_list[i].first.size(); j++)
             for (int k = 0; k < parsing_stack.back().second.type->record_list[0].first.size(); k++)
                 if (new_token.type->record_list[i].first[j] == parsing_stack.back().second.type->record_list[0].first[k]) {
                     output_error(parsing_stack.back().second.id_line[k], parsing_stack.back().second.id_col[k], parsing_stack.back().second.id_pos[k], "duplicate identifier");
-                    return false;
+                    flag = false;
                 }
     new_token.type->record_list.push_back(parsing_stack.back().second.type->record_list[0]);
     delete parsing_stack.back().second.type;
+    if (! flag)
+        return false;
     return true;
 }
 
@@ -940,25 +1052,34 @@ bool Parser::process_id_list(Token &new_token) {
     new_token.id_line = parsing_stack[parsing_stack.size() - 3].second.id_line;
     new_token.id_col = parsing_stack[parsing_stack.size() - 3].second.id_col;
     new_token.id_pos = parsing_stack[parsing_stack.size() - 3].second.id_pos;
+    bool flag = true;
+    for (int i = 0; i < new_token.id_list.size(); i++)
+        if (new_token.id_list[i] == parsing_stack.back().second.no) {
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "duplicate identifier");
+            flag = false;
+        }
     new_token.id_list.push_back(parsing_stack.back().second.no);
     new_token.id_line.push_back(parsing_stack.back().second.line);
     new_token.id_col.push_back(parsing_stack.back().second.col);
     new_token.id_pos.push_back(parsing_stack.back().second.pos);
+    if (! flag)
+        return false;
     return true;
 }
 
 bool Parser::process_const_type_declar(Token &new_token) {
     int id_no = parsing_stack[parsing_stack.size() - 3].second.no;
-    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
-        if (p->defined(id_no)) {
-            output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "identifier has already been defined");
-            return false;
-        }
+    if (current_symbol_table->defined(id_no)) {
+        output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "identifier has already been defined");
+        return false;
+    }
     current_symbol_table->symbols[id_no] = parsing_stack.back().second.type;
     current_symbol_table->is_const[id_no] = true;
     new_token.type = parsing_stack.back().second.type;
     std::vector<std::string> tmp;
     tmp.push_back(no_token[id_no]);
+    for (int i = 0; i < indent; i++)
+        result << "\t";
     result << "const " << id_with_type(new_token.type, tmp) << " = ";
     return true;
 }
@@ -1042,7 +1163,7 @@ bool Parser::process_M3(Token &new_token) {
         return false;
     }
     new_token.type = type->array_type;
-    for (; new_token.type && new_token.type->category == 6; new_token.type = new_token.type->array_type);
+    for (; new_token.type && new_token.type->category == 6; new_token.type = new_token.type->named_type);
     if (type->array_index_type == 0) {
         int l = std::stoi(type->array_bias, 0, 0), r = std::stoi(type->array_uprange, 0, 0);
         new_token.array_len = r - l + 1;
@@ -1126,7 +1247,7 @@ bool Parser::process_single_record_field_val_split(Token &new_token) {
         return false;
     }
     parsing_stack[parsing_stack.size() - 3].second.record_defined_ids.insert(id_no);
-    for (; new_token.type && new_token.type->category == 6; new_token.type = new_token.type->array_type);
+    for (; new_token.type && new_token.type->category == 6; new_token.type = new_token.type->named_type);
     for (int i = 0; i < indent; i++)
         result << "\t";
     result << no_token[id_no] << " : ";
@@ -1152,7 +1273,7 @@ bool Parser::process_record_field_val_split(Token &new_token) {
         return false;
     }
     parsing_stack[parsing_stack.size() - 5].second.record_defined_ids.insert(id_no);
-    for (; new_token.type && new_token.type->category == 6; new_token.type = new_token.type->array_type);
+    for (; new_token.type && new_token.type->category == 6; new_token.type = new_token.type->named_type);
     for (int i = 0; i < indent; i++)
         result << "\t";
     result << no_token[id_no] << " : ";
@@ -1167,11 +1288,10 @@ bool Parser::process_record_field_split(Token &new_token) {
 bool Parser::process_var_type_declar(Token &new_token) {
     bool flag = true;
     for (int i = 0; i < parsing_stack[parsing_stack.size() - 3].second.id_list.size(); i++) {
-        for (SymbolTable *p = current_symbol_table; p; p = p->parent)
-            if (p->defined(parsing_stack[parsing_stack.size() - 3].second.id_list[i])) {
-                output_error(parsing_stack[parsing_stack.size() - 3].second.id_line[i], parsing_stack[parsing_stack.size() - 3].second.id_col[i], parsing_stack[parsing_stack.size() - 3].second.id_pos[i], "identifier has already been defined");
-                flag = false;
-            }
+        if (current_symbol_table->defined(parsing_stack[parsing_stack.size() - 3].second.id_list[i])) {
+            output_error(parsing_stack[parsing_stack.size() - 3].second.id_line[i], parsing_stack[parsing_stack.size() - 3].second.id_col[i], parsing_stack[parsing_stack.size() - 3].second.id_pos[i], "identifier has already been defined");
+            flag = false;
+        }
         if (flag)
             current_symbol_table->symbols[parsing_stack[parsing_stack.size() - 3].second.id_list[i]] = parsing_stack.back().second.type;
     }
@@ -1182,6 +1302,8 @@ bool Parser::process_var_type_declar(Token &new_token) {
     std::vector<std::string> tmp;
     for (int i = 0; i < parsing_stack[parsing_stack.size() - 3].second.id_list.size(); i++)
         tmp.push_back(no_token[parsing_stack[parsing_stack.size() - 3].second.id_list[i]]);
+    for (int i = 0; i < indent; i++)
+        result << "\t";
     result << id_with_type(new_token.type, tmp);
     return true;
 }
@@ -1197,6 +1319,203 @@ bool Parser::process_M5(Token &new_token) {
     return true;
 }
 
+bool Parser::process_proc_func_declar(Token &new_token) {
+    SymbolTable *p = current_symbol_table;
+    current_symbol_table = current_symbol_table->parent;
+    if (current_symbol_table->defined_except_func(p->functype->id_no)) {
+        output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "identifier has already been defined");
+        return false;
+    }
+    for (int i = 0; i < current_symbol_table->subtable[p->functype->id_no].size(); i++)
+        if (functype_match(p->functype, current_symbol_table->subtable[p->functype->id_no][i]->functype, 0)) {
+            output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "duplicate procedure/function identifier");
+            return false;
+        }
+    current_symbol_table->subtable[p->functype->id_no].push_back(p);
+    result << ";\n";
+    return true;
+}
+
+bool Parser::process_procedure_heading(Token &new_token) {
+    current_symbol_table->functype->ret_type = NULL;
+    for (int i = 0; i < indent; i++)
+        result << "\t";
+    result << "void ";
+    result << no_token[current_symbol_table->functype->id_no];
+    result << "(";
+    if (! current_symbol_table->functype->param_list.empty()) {
+        for (int i = 0; i < current_symbol_table->functype->param_list.size(); i++) {
+            if (current_symbol_table->functype->param_list[i].second.first == 2)
+                result << "const ";
+            std::vector<std::string> tmp;
+            tmp.push_back(no_token[current_symbol_table->functype->param_list[i].first]);
+            if (current_symbol_table->functype->param_list[i].second.first == 1)
+            tmp[0] = "&" + tmp[0];
+            result << id_with_type(current_symbol_table->functype->param_list[i].second.second, tmp);
+            if (i != current_symbol_table->functype->param_list.size() - 1)
+                result << ", ";
+        }
+    }
+    result << ")";
+    return true;
+}
+
+bool Parser::process_function_heading(Token &new_token) {
+    current_symbol_table->functype->ret_type = parsing_stack[parsing_stack.size() - 2].second.type;
+    current_symbol_table->symbols[current_symbol_table->functype->id_no] = parsing_stack[parsing_stack.size() - 2].second.type;
+    for (int i = 0; i < indent; i++)
+        result << "\t";
+    std::vector<std::string> tmp;
+    tmp.push_back(no_token[current_symbol_table->functype->id_no]);
+    result << id_with_type(current_symbol_table->functype->ret_type, tmp);
+    result << "(";
+    if (! current_symbol_table->functype->param_list.empty()) {
+        for (int i = 0; i < current_symbol_table->functype->param_list.size(); i++) {
+            if (current_symbol_table->functype->param_list[i].second.first == 2)
+                result << "const ";
+            std::vector<std::string> tmp;
+            tmp.push_back(no_token[current_symbol_table->functype->param_list[i].first]);
+            if (current_symbol_table->functype->param_list[i].second.first == 1)
+            tmp[0] = "&" + tmp[0];
+            result << id_with_type(current_symbol_table->functype->param_list[i].second.second, tmp);
+            if (i != current_symbol_table->functype->param_list.size() - 1)
+                result << ", ";
+        }
+    }
+    result << ")";
+    return true;
+}
+
+bool Parser::process_formal_parameter_spec(Token &new_token) {
+    for (int i = 0; i < parsing_stack[parsing_stack.size() - 3].second.id_list.size(); i++) {
+        if (current_symbol_table->defined(parsing_stack[parsing_stack.size() - 3].second.id_list[i])) {
+            output_error(parsing_stack[parsing_stack.size() - 3].second.id_line[i], parsing_stack[parsing_stack.size() - 3].second.id_col[i], parsing_stack[parsing_stack.size() - 3].second.id_pos[i], "duplicate identifier");
+            return false;
+        }
+        current_symbol_table->symbols[parsing_stack[parsing_stack.size() - 3].second.id_list[i]] = parsing_stack.back().second.type;
+    }
+    Type *p = parsing_stack.back().second.type;
+    for (; p && p->category == 6; p = p->named_type);
+    if (p && p->category == 2) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "val parameters of array type is not supported in C++");
+        return false;
+    }
+    for (int i = 0; i < parsing_stack[parsing_stack.size() - 3].second.id_list.size(); i++)
+        current_symbol_table->functype->param_list.push_back(std::make_pair(parsing_stack[parsing_stack.size() - 3].second.id_list[i], std::make_pair(0, parsing_stack.back().second.type)));
+    return true;
+}
+
+bool Parser::process_formal_parameter_spec_var(Token &new_token) {
+    for (int i = 0; i < parsing_stack[parsing_stack.size() - 3].second.id_list.size(); i++) {
+        if (current_symbol_table->defined(parsing_stack[parsing_stack.size() - 3].second.id_list[i])) {
+            output_error(parsing_stack[parsing_stack.size() - 3].second.id_line[i], parsing_stack[parsing_stack.size() - 3].second.id_col[i], parsing_stack[parsing_stack.size() - 3].second.id_pos[i], "duplicate identifier");
+            return false;
+        }
+        current_symbol_table->symbols[parsing_stack[parsing_stack.size() - 3].second.id_list[i]] = parsing_stack.back().second.type;
+    }
+    Type *p = parsing_stack.back().second.type;
+    for (; p && p->category == 6; p = p->named_type);
+    if (p && p->category == 2)
+        for (int i = 0; i < parsing_stack[parsing_stack.size() - 3].second.id_list.size(); i++)
+            current_symbol_table->functype->param_list.push_back(std::make_pair(parsing_stack[parsing_stack.size() - 3].second.id_list[i], std::make_pair(0, parsing_stack.back().second.type)));
+    else
+        for (int i = 0; i < parsing_stack[parsing_stack.size() - 3].second.id_list.size(); i++)
+            current_symbol_table->functype->param_list.push_back(std::make_pair(parsing_stack[parsing_stack.size() - 3].second.id_list[i], std::make_pair(1, parsing_stack.back().second.type)));
+    return true;
+}
+
+bool Parser::process_formal_parameter_spec_const(Token &new_token) {
+    for (int i = 0; i < parsing_stack[parsing_stack.size() - 3].second.id_list.size(); i++) {
+        if (current_symbol_table->defined(parsing_stack[parsing_stack.size() - 3].second.id_list[i])) {
+            output_error(parsing_stack[parsing_stack.size() - 3].second.id_line[i], parsing_stack[parsing_stack.size() - 3].second.id_col[i], parsing_stack[parsing_stack.size() - 3].second.id_pos[i], "duplicate identifier");
+            return false;
+        }
+        current_symbol_table->symbols[parsing_stack[parsing_stack.size() - 3].second.id_list[i]] = parsing_stack.back().second.type;
+        current_symbol_table->is_const[parsing_stack[parsing_stack.size() - 3].second.id_list[i]] = true;
+    }
+    for (int i = 0; i < parsing_stack[parsing_stack.size() - 3].second.id_list.size(); i++)
+        current_symbol_table->functype->param_list.push_back(std::make_pair(parsing_stack[parsing_stack.size() - 3].second.id_list[i], std::make_pair(2, parsing_stack.back().second.type)));
+    return true;
+}
+
+bool Parser::process_id_type_identifier(Token &new_token) {
+    int id_no = parsing_stack.back().second.no;
+    Type *tmp = NULL;
+    bool flag = false;
+    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
+        if (p->defined(id_no)) {
+            if (p->named_types.count(id_no))
+                tmp = p->named_types[id_no];
+            flag = true;
+            break;
+        }
+    if (! tmp) {
+        if (! flag)
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier has not been defined");
+        else
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier is not a type");
+        new_token.type = NULL;
+        return false;
+    }
+    new_token.type = tmp;
+    return true;
+}
+
+bool Parser::process_basic_type_identifier(Token &new_token) {
+    int id_no = parsing_stack.back().second.no;
+    new_token.type = new Type;
+    if (id_no == 37) {
+        new_token.type->category = 1;
+        new_token.type->pointer_type = new Type;
+        new_token.type->pointer_type->category = 0;
+        new_token.type->pointer_type->type_no = 37;
+        return true;
+    }
+    new_token.type->category = 0;
+    if (id_no >= 6 && id_no <= 8)
+        id_no = 5;
+    else
+        if (id_no == 15)
+            id_no = 14;
+        else
+            if (id_no == 21)
+                id_no = 20;
+            else
+                if (id_no == 22 || id_no == 25 || id_no == 26)
+                    id_no = 23;
+                else
+                    if (id_no >= 28 && id_no <= 30)
+                        id_no = 27;
+                    else
+                        if (id_no == 32)
+                            id_no = 33;
+                        else
+                            if (id_no >= 34 && id_no <= 36)
+                                id_no = 33;
+    new_token.type->type_no = id_no;
+    return true;
+}
+
+bool Parser::process_array_type_identifier(Token &new_token) {
+    new_token.type = new Type;
+    new_token.type->category = 2;
+    new_token.type->array_index_type = -1;
+    new_token.type->array_type = parsing_stack.back().second.type;
+    return true;
+}
+
+bool Parser::process_M6(Token &new_token) {
+    int id_no = parsing_stack.back().second.no;
+    SymbolTable *new_symbol_table = new SymbolTable;
+    new_symbol_table->parent = current_symbol_table;
+    new_symbol_table->functype = new FuncType;
+    new_symbol_table->functype->id_no = id_no;
+    new_symbol_table->functype->defined = false;
+    new_symbol_table->symbols[id_no] = NULL;
+    current_symbol_table = new_symbol_table;
+    return true;
+}
+
 void Parser::grammar_init() {
     Generation tmp;
     //program' = program
@@ -1206,7 +1525,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //program = M1 program-heading ';' program-block '.'
+    //program = M1 program-heading ';' block '.'
     tmp.left = 1;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 2));
@@ -1217,7 +1536,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //program = M1 program-block '.'
+    //program = M1 block '.'
     tmp.left = 1;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 2));
@@ -1267,7 +1586,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //program-block = definition-part
+    //block = definition-part
     tmp.left = 4;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 6));
@@ -1309,6 +1628,22 @@ void Parser::grammar_init() {
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 6));
     tmp.right.push_back(Symbol(-1, 39));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //definition-part = definition-part procedure-definition-part
+    tmp.left = 6;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 6));
+    tmp.right.push_back(Symbol(-1, 44));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //definition-part = definition-part function-definition-part
+    tmp.left = 6;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 6));
+    tmp.right.push_back(Symbol(-1, 45));
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
@@ -1916,6 +2251,160 @@ void Parser::grammar_init() {
     tmp.left = 43;
     tmp.right.clear();
     tmp.process = &Parser::process_M5;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //procedure-definition-part = procedure-heading forward ';'
+    tmp.left = 44;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 46));
+    tmp.right.push_back(Symbol(0, 54));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.process = &Parser::process_proc_func_declar;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //function-definition-part = function-heading forward ';'
+    tmp.left = 45;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 47));
+    tmp.right.push_back(Symbol(0, 54));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.process = &Parser::process_proc_func_declar;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //procedure-heading = procedure identifier M6 ';'
+    tmp.left = 46;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 35));
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.right.push_back(Symbol(-1, 52));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.process = &Parser::process_procedure_heading;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //procedure-heading = procedure identifier M6 '(' formal-parameter-list ')' ';'
+    tmp.left = 46;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 35));
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.right.push_back(Symbol(-1, 52));
+    tmp.right.push_back(Symbol(7, 4));
+    tmp.right.push_back(Symbol(-1, 48));
+    tmp.right.push_back(Symbol(7, 5));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.process = &Parser::process_procedure_heading;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //function-heading = function identifier M6 ':' no-array-type-identifier ';'
+    tmp.left = 47;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 18));
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.right.push_back(Symbol(-1, 52));
+    tmp.right.push_back(Symbol(7, 2));
+    tmp.right.push_back(Symbol(-1, 51));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.process = &Parser::process_function_heading;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //function-heading = function identifier M6 '(' formal-parameter-list ')' ':' no-array-type-identifier ';'
+    tmp.left = 47;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 18));
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.right.push_back(Symbol(-1, 52));
+    tmp.right.push_back(Symbol(7, 4));
+    tmp.right.push_back(Symbol(-1, 48));
+    tmp.right.push_back(Symbol(7, 5));
+    tmp.right.push_back(Symbol(7, 2));
+    tmp.right.push_back(Symbol(-1, 51));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.process = &Parser::process_function_heading;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //formal-parameter-list = formal-parameter-specification
+    tmp.left = 48;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 49));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //formal-parameter-list = formal-parameter-list ';' formal-parameter-specification
+    tmp.left = 48;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 48));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.right.push_back(Symbol(-1, 49));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //formal-parameter-specification = identifier-list ':' no-array-type-identifier
+    tmp.left =49;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 27));
+    tmp.right.push_back(Symbol(7, 2));
+    tmp.right.push_back(Symbol(-1, 51));
+    tmp.process = &Parser::process_formal_parameter_spec;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //formal-parameter-specification = var identifier-list ':' type-identifier
+    tmp.left = 49;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 50));
+    tmp.right.push_back(Symbol(-1, 27));
+    tmp.right.push_back(Symbol(7, 2));
+    tmp.right.push_back(Symbol(-1, 50));
+    tmp.process = &Parser::process_formal_parameter_spec_var;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //formal-parameter-specification = const identifier-list ':' type-identifier
+    tmp.left = 49;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 6));
+    tmp.right.push_back(Symbol(-1, 27));
+    tmp.right.push_back(Symbol(7, 2));
+    tmp.right.push_back(Symbol(-1, 50));
+    tmp.process = &Parser::process_formal_parameter_spec_const;
+    //type-identifier = identifier
+    tmp.left = 50;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.process = &Parser::process_id_type_identifier;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //type-identifier = origin-type
+    tmp.left = 50;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(1, 0));
+    tmp.process = &Parser::process_basic_type_identifier;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //type-identifier = array of type-identifier
+    tmp.left = 50;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 1));
+    tmp.right.push_back(Symbol(0, 30));
+    tmp.right.push_back(Symbol(-1, 50));
+    tmp.process = &Parser::process_array_type_identifier;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //no-array-type-identifier = identifier
+    tmp.left = 51;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.process = &Parser::process_id_type_identifier;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //no-array-type-identifier = origin-type
+    tmp.left = 51;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(1, 0));
+    tmp.process = &Parser::process_basic_type_identifier;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M6 = ε
+    tmp.left = 52;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M6;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }
