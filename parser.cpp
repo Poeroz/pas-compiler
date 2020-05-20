@@ -2440,6 +2440,8 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(7, 2));
     tmp.right.push_back(Symbol(-1, 50));
     tmp.process = &Parser::process_formal_parameter_spec_const;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //type-identifier = identifier
     tmp.left = 50;
     tmp.right.clear();
