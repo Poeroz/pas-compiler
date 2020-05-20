@@ -100,7 +100,6 @@ private:
     bool process_M7(Token &new_token);
     bool process_program_statement(Token &new_token);
     bool process_M8(Token &new_token);
-    bool process_proc_func_statement(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);

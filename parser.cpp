@@ -1586,10 +1586,6 @@ bool Parser::process_M8(Token &new_token) {
     return true;
 }
 
-bool Parser::process_proc_func_statement(Token &new_token) {
-    return true;
-}
-
 void Parser::grammar_init() {
     Generation tmp;
     //program' = program
@@ -2577,7 +2573,7 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(0, 3));
     tmp.right.push_back(Symbol(-1, 59));
     tmp.right.push_back(Symbol(0, 14));
-    tmp.process = &Parser::process_proc_func_statement;
+    tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //statement-sequence = ε
