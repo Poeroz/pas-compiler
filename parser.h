@@ -86,6 +86,7 @@ private:
     bool process_var_type_declar(Token &new_token);
     bool process_M5(Token &new_token);
     bool process_proc_func_declar(Token &new_token);
+    bool process_proc_func_def(Token &new_token);
     bool process_procedure_heading(Token &new_token);
     bool process_function_heading(Token &new_token);
     bool process_formal_parameter_spec(Token &new_token);
@@ -95,6 +96,8 @@ private:
     bool process_basic_type_identifier(Token &new_token);
     bool process_array_type_identifier(Token &new_token);
     bool process_M6(Token &new_token);
+    bool process_proc_func_block(Token &new_token);
+    bool process_M7(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);

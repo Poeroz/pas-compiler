@@ -9,7 +9,7 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 53;
+int Parser::num_nonterminal = 56;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
@@ -426,6 +426,8 @@ std::string Parser::id_with_type(Type *type, std::vector<std::string> id_list, s
 // 0--exclusive 1--match
 
 bool Parser::type_match(Type *a, Type *b, int match_type) const {
+    if (! a && ! b)
+        return true;
     for (; a && a->category == 6; a = a->named_type);
     for (; b && b->category == 6; b = b->named_type);
     if (! a || ! b)
@@ -1332,7 +1334,36 @@ bool Parser::process_proc_func_declar(Token &new_token) {
             return false;
         }
     current_symbol_table->subtable[p->functype->id_no].push_back(p);
-    result << ";\n";
+    result << ";\n\n";
+    return true;
+}
+
+bool Parser::process_proc_func_def(Token &new_token) {
+    SymbolTable *p = current_symbol_table;
+    current_symbol_table = current_symbol_table->parent;
+    if (current_symbol_table->defined_except_func(p->functype->id_no)) {
+        output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "identifier has already been defined");
+        return false;
+    }
+    p->functype->defined = true;
+    bool flag = false;
+    for (int i = 0; i < current_symbol_table->subtable[p->functype->id_no].size(); i++)
+        if (functype_match(p->functype, current_symbol_table->subtable[p->functype->id_no][i]->functype, 0)) {
+            if (! functype_match(p->functype, current_symbol_table->subtable[p->functype->id_no][i]->functype, 1)) {
+                output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "duplicate procedure/function identifier");
+                return false;
+            }
+            if (current_symbol_table->subtable[p->functype->id_no][i]->functype->defined) {
+                output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "procedure/function has already been defined");
+                return false;
+            }
+            flag = true;
+            delete current_symbol_table->subtable[p->functype->id_no][i];
+            current_symbol_table->subtable[p->functype->id_no][i] = p;
+        }
+    if (! flag)
+        current_symbol_table->subtable[p->functype->id_no].push_back(p);
+    result << "\n";
     return true;
 }
 
@@ -1516,6 +1547,33 @@ bool Parser::process_M6(Token &new_token) {
     return true;
 }
 
+bool Parser::process_proc_func_block(Token &new_token) {
+    if (current_symbol_table->functype->ret_type) {
+        for (int i = 0; i < indent; i++)
+            result << "\t";
+        result << "return " << no_token[current_symbol_table->functype->id_no] << ";\n";
+    }
+    indent--;
+    for (int i = 0; i < indent; i++)
+        result << "\t";
+    result << "}\n";
+    return true;
+}
+
+bool Parser::process_M7(Token &new_token) {
+    result << " {\n";
+    indent++;
+    if (current_symbol_table->functype->ret_type) {
+        for (int i = 0; i < indent; i++)
+            result << "\t";
+        std::vector<std::string> tmp;
+        tmp.push_back(no_token[current_symbol_table->functype->id_no]);
+        result << id_with_type(current_symbol_table->functype->ret_type, tmp);
+        result << ";\n";
+    }
+    return true;
+}
+
 void Parser::grammar_init() {
     Generation tmp;
     //program' = program
@@ -1525,7 +1583,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //program = M1 program-heading ';' block '.'
+    //program = M1 program-heading ';' program-block '.'
     tmp.left = 1;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 2));
@@ -1536,7 +1594,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //program = M1 block '.'
+    //program = M1 program-block '.'
     tmp.left = 1;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 2));
@@ -1586,7 +1644,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //block = definition-part
+    //program-block = definition-part
     tmp.left = 4;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 6));
@@ -2262,6 +2320,15 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_proc_func_declar;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //procedure-definition-part = procedure-heading proc-func-block ';'
+    tmp.left = 44;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 46));
+    tmp.right.push_back(Symbol(-1, 53));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.process = &Parser::process_proc_func_def;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //function-definition-part = function-heading forward ';'
     tmp.left = 45;
     tmp.right.clear();
@@ -2269,6 +2336,15 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(0, 54));
     tmp.right.push_back(Symbol(7, 3));
     tmp.process = &Parser::process_proc_func_declar;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //function-definition-part = function-heading proc-func-block ';'
+    tmp.left = 45;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 47));
+    tmp.right.push_back(Symbol(-1, 53));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.process = &Parser::process_proc_func_def;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //procedure-heading = procedure identifier M6 ';'
@@ -2405,6 +2481,58 @@ void Parser::grammar_init() {
     tmp.left = 52;
     tmp.right.clear();
     tmp.process = &Parser::process_M6;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //proc-func-block = M7 proc-func-definition-part
+    tmp.left = 53;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 54));
+    tmp.right.push_back(Symbol(-1, 55));
+    tmp.process = &Parser::process_proc_func_block;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M7 = ε
+    tmp.left = 54;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M7;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //proc-func-definition-part = ε
+    tmp.left = 55;
+    tmp.right.clear();
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //proc-func-definition-part = proc-func-definition-part label-declaration-part
+    tmp.left = 55;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 55));
+    tmp.right.push_back(Symbol(-1, 7));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //proc-func-definition-part = proc-func-definition-part constant-definition-part
+    tmp.left = 55;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 55));
+    tmp.right.push_back(Symbol(-1, 9));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //proc-func-definition-part = proc-func-definition-part type-definition-part
+    tmp.left = 55;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 55));
+    tmp.right.push_back(Symbol(-1, 12));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //proc-func-definition-part = proc-func-definition-part variable-definition-part
+    tmp.left = 55;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 55));
+    tmp.right.push_back(Symbol(-1, 39));
+    tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }
