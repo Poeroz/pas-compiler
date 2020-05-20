@@ -9,7 +9,7 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 56;
+int Parser::num_nonterminal = 60;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
@@ -1574,6 +1574,22 @@ bool Parser::process_M7(Token &new_token) {
     return true;
 }
 
+bool Parser::process_program_statement(Token &new_token) {
+    indent--;
+    result << "}\n";
+    return true;
+}
+
+bool Parser::process_M8(Token &new_token) {
+    result << "int main() {\n";
+    indent++;
+    return true;
+}
+
+bool Parser::process_proc_func_statement(Token &new_token) {
+    return true;
+}
+
 void Parser::grammar_init() {
     Generation tmp;
     //program' = program
@@ -1644,10 +1660,11 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //program-block = definition-part
+    //program-block = definition-part program-statement-part
     tmp.left = 4;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 6));
+    tmp.right.push_back(Symbol(-1, 56));
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
@@ -2485,11 +2502,12 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_M6;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //proc-func-block = M7 proc-func-definition-part
+    //proc-func-block = M7 proc-func-definition-part proc-func-statement-part
     tmp.left = 53;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 54));
     tmp.right.push_back(Symbol(-1, 55));
+    tmp.right.push_back(Symbol(-1, 58));
     tmp.process = &Parser::process_proc_func_block;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
@@ -2534,6 +2552,37 @@ void Parser::grammar_init() {
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 55));
     tmp.right.push_back(Symbol(-1, 39));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //program-statement-part = begin M8 statement-sequence end
+    tmp.left = 56;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 3));
+    tmp.right.push_back(Symbol(-1, 57));
+    tmp.right.push_back(Symbol(-1, 59));
+    tmp.right.push_back(Symbol(0, 14));
+    tmp.process = &Parser::process_program_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M8 = ε
+    tmp.left = 57;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M8;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //proc-func-statement-part = begin statement-sequence end
+    tmp.left = 58;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 3));
+    tmp.right.push_back(Symbol(-1, 59));
+    tmp.right.push_back(Symbol(0, 14));
+    tmp.process = &Parser::process_proc_func_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement-sequence = ε
+    tmp.left = 59;
+    tmp.right.clear();
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
