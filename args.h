@@ -262,10 +262,12 @@ struct Symbol {
     bool operator == (const Symbol &_) const;
 };
 
+extern int label_cnt;
+
 struct SymbolTable {
     SymbolTable* parent;
     FuncType *functype; //for procedures and functions
-    std::unordered_set<std::string> labels;
+    std::unordered_map<std::string, int> labels;
     std::unordered_map<int, Type*> named_types;
     std::unordered_map<int, Type*> symbols;
     std::unordered_map<int, bool> is_const;

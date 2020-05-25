@@ -9,7 +9,7 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 60;
+int Parser::num_nonterminal = 62;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
@@ -550,16 +550,12 @@ bool Parser::process_M1(Token &new_token) {
 
 bool Parser::process_label(Token &new_token) {
     std::string label = parsing_stack.back().second.content;
-    if (label.length() > 4) {
-        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "label syntax error");
-        return false;
-    }
     for (int i = 0; i < label.length(); i++)
         if (! isdigit(label[i])) {
             output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "label syntax error");
             return false;
         }
-    current_symbol_table->labels.insert(label);
+    current_symbol_table->labels[label] = label_cnt++;
     return true;
 }
 
@@ -659,6 +655,11 @@ bool Parser::process_semicolon_newline(Token &new_token) {
 }
 
 bool Parser::process_type_def(Token &new_token) {
+    if (! parsing_stack[parsing_stack.size() - 4].second.type) {
+        if (parsing_stack[parsing_stack.size() - 2].second.type)
+            delete parsing_stack[parsing_stack.size() - 2].second.type;
+        return false;
+    }
     int id_no = parsing_stack[parsing_stack.size() - 4].second.type->named_id_no;
     Type *type = current_symbol_table->named_types[id_no];
     type->named_type = parsing_stack[parsing_stack.size() - 2].second.type;
@@ -683,7 +684,8 @@ bool Parser::process_type_def(Token &new_token) {
 bool Parser::process_type_name(Token &new_token) {
     int id_no = parsing_stack.back().second.no;
     if (current_symbol_table->defined(id_no)) {
-        output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "identifier has already been defined");
+        new_token.type = NULL;
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier has already been defined");
         return false;
     }
     Type *type = new Type;
@@ -1072,6 +1074,7 @@ bool Parser::process_id_list(Token &new_token) {
 bool Parser::process_const_type_declar(Token &new_token) {
     int id_no = parsing_stack[parsing_stack.size() - 3].second.no;
     if (current_symbol_table->defined(id_no)) {
+        new_token.type = NULL;
         output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "identifier has already been defined");
         return false;
     }
@@ -1291,6 +1294,7 @@ bool Parser::process_var_type_declar(Token &new_token) {
     bool flag = true;
     for (int i = 0; i < parsing_stack[parsing_stack.size() - 3].second.id_list.size(); i++) {
         if (current_symbol_table->defined(parsing_stack[parsing_stack.size() - 3].second.id_list[i])) {
+            new_token.type = NULL;
             output_error(parsing_stack[parsing_stack.size() - 3].second.id_line[i], parsing_stack[parsing_stack.size() - 3].second.id_col[i], parsing_stack[parsing_stack.size() - 3].second.id_pos[i], "identifier has already been defined");
             flag = false;
         }
@@ -1586,6 +1590,24 @@ bool Parser::process_M8(Token &new_token) {
     return true;
 }
 
+bool Parser::process_label_part(Token &new_token) {
+    std::string label = parsing_stack[parsing_stack.size() - 2].second.content;
+    int label_no = -1;
+    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
+        if (p->labels.count(label)) {
+            label_no = p->labels[label];
+            break;
+        }
+    if (label_no == -1) {
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "label has not been defined");
+        return false;
+    }
+    for (int i = 0; i < indent; i++)
+        result << "\t";
+    result << "label_" << label_no << ":" << std::endl;
+    return true;
+}
+
 void Parser::grammar_init() {
     Generation tmp;
     //program' = program
@@ -1727,14 +1749,14 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //label-list = label
+    //label-list = integer-literal
     tmp.left = 8;
     tmp.right.clear();
     tmp.right.push_back(Symbol(3, 0));
     tmp.process = &Parser::process_label;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //label-list = label-list ',' label
+    //label-list = label-list ',' integer-literal
     tmp.left = 8;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 8));
@@ -2576,10 +2598,42 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //statement-sequence = ε
+    //statement-sequence = statement-with-labels
     tmp.left = 59;
     tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 60));
     tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement-sequence = statement-sequence ';' statement-with-labels
+    tmp.left = 59;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 59));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.right.push_back(Symbol(-1, 60));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement-with-labels = ε
+    tmp.left = 60;
+    tmp.right.clear();
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement-with-labels = label-part statement-with-labels
+    tmp.left = 60;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 61));
+    tmp.right.push_back(Symbol(-1, 60));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    // label-part = integer-literal ':'
+    tmp.left = 61;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(3, 0));
+    tmp.right.push_back(Symbol(7, 2));
+    tmp.process = &Parser::process_label_part;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }

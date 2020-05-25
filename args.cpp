@@ -3,6 +3,8 @@
 #include <iostream>
 #include "args.h"
 
+int label_cnt = 0;
+
 const int num_keywords = 55, num_data_types = 38, num_rtl_functions = 46, num_operators = 16, num_symbols = 9;
 const std::string keywords[55] = {"and", "array", "asm", "begin", "break", "case", "const", "constructor", "continue", "destructor",
                                   "div", "do", "downto", "else", "end", "false", "file", "for", "function", "goto",
