@@ -9,7 +9,7 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 62;
+int Parser::num_nonterminal = 68;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
@@ -423,7 +423,7 @@ std::string Parser::id_with_type(Type *type, std::vector<std::string> id_list, s
     return res;
 }
 
-// 0--exclusive 1--match
+// 0--exclusive 1--match 2--compatible
 
 bool Parser::type_match(Type *a, Type *b, int match_type) const {
     if (! a && ! b)
@@ -435,46 +435,57 @@ bool Parser::type_match(Type *a, Type *b, int match_type) const {
     if (a->category != b->category)
         return false;
     if (a->category == 0) {
-        if (a->type_no >= 0 && a->type_no <= 1 && b->type_no >= 0 && b->type_no <= 1)
-            return true;
-        if (a->type_no >= 2 && a->type_no <= 3 && b->type_no >= 2 && b->type_no <= 3)
-            return true;
-        if (a->type_no >= 4 && a->type_no <= 7 && b->type_no >= 4 && b->type_no <= 7)
-            return true;
-        if (a->type_no == 8 && b->type_no == 8)
-            return true;
-        if (a->type_no >= 9 && a->type_no <= 10 && b->type_no >= 9 && b->type_no <= 10)
-            return true;
-        if (a->type_no >= 13 && a->type_no <= 15 && b->type_no >= 13 && b->type_no <= 15)
-            return true;
-        if (a->type_no >= 16 && a->type_no <= 17 && b->type_no >= 16 && b->type_no <= 17)
-            return true;
-        if (a->type_no == 18 && b->type_no == 18)
-            return true;
-        if (a->type_no == 19 && b->type_no == 19)
-            return true;
-        if (match_type) {
-            if (a->type_no >= 11 && a->type_no <= 12 && b->type_no >= 11 && b->type_no <= 12)
-                return true;
-            for (int i = 20; i <= 37; i++)
-                if (a->type_no == b->type_no)
-                    return true;
-        }
-        else {
-            if ((a->type_no == 11 || a->type_no == 12 || a->type_no == 31) && (b->type_no == 11 || b->type_no == 12 || b->type_no == 31))
-                return true;
-            if (a->type_no >= 20 && a->type_no <= 21)
-                return true;
-            if ((a->type_no == 22 || a->type_no == 23 || a->type_no == 25 || a->type_no == 26) && (b->type_no == 22 || b->type_no == 23 || b->type_no == 25 || b->type_no == 26))
-                return true;
-            if (a->type_no == 24 && b->type_no == 24)
+        if (match_type == 2) {
+            if (a->type_no <= 26 && b->type_no <= 26)
                 return true;
             if (a->type_no >= 27 && a->type_no <= 30 && b->type_no >= 27 && b->type_no <= 30)
                 return true;
-            if ((a->type_no == 32 || a->type_no == 33 || a->type_no == 35) && (b->type_no == 32 || b->type_no == 33 || b->type_no == 35))
+            if ((a->type_no == 31 || a->type_no == 32 || a->type_no == 33 || a->type_no == 35) && 
+                (b->type_no == 31 || b->type_no == 32 || b->type_no == 33 || b->type_no == 35))
                 return true;
-            if ((a->type_no == 34 || a->type_no == 36) && (b->type_no == 34 || b->type_no == 36))
+        }
+        else {
+            if (a->type_no >= 0 && a->type_no <= 1 && b->type_no >= 0 && b->type_no <= 1)
                 return true;
+            if (a->type_no >= 2 && a->type_no <= 3 && b->type_no >= 2 && b->type_no <= 3)
+                return true;
+            if (a->type_no >= 4 && a->type_no <= 7 && b->type_no >= 4 && b->type_no <= 7)
+                return true;
+            if (a->type_no == 8 && b->type_no == 8)
+                return true;
+            if (a->type_no >= 9 && a->type_no <= 10 && b->type_no >= 9 && b->type_no <= 10)
+                return true;
+            if (a->type_no >= 13 && a->type_no <= 15 && b->type_no >= 13 && b->type_no <= 15)
+                return true;
+            if (a->type_no >= 16 && a->type_no <= 17 && b->type_no >= 16 && b->type_no <= 17)
+                return true;
+            if (a->type_no == 18 && b->type_no == 18)
+                return true;
+            if (a->type_no == 19 && b->type_no == 19)
+                return true;
+            if (match_type == 1) {
+                if (a->type_no >= 11 && a->type_no <= 12 && b->type_no >= 11 && b->type_no <= 12)
+                    return true;
+                for (int i = 20; i <= 37; i++)
+                    if (a->type_no == b->type_no)
+                        return true;
+            }
+            else {
+                if ((a->type_no == 11 || a->type_no == 12 || a->type_no == 31) && (b->type_no == 11 || b->type_no == 12 || b->type_no == 31))
+                    return true;
+                if (a->type_no >= 20 && a->type_no <= 21)
+                    return true;
+                if ((a->type_no == 22 || a->type_no == 23 || a->type_no == 25 || a->type_no == 26) && (b->type_no == 22 || b->type_no == 23 || b->type_no == 25 || b->type_no == 26))
+                    return true;
+                if (a->type_no == 24 && b->type_no == 24)
+                    return true;
+                if (a->type_no >= 27 && a->type_no <= 30 && b->type_no >= 27 && b->type_no <= 30)
+                    return true;
+                if ((a->type_no == 32 || a->type_no == 33 || a->type_no == 35) && (b->type_no == 32 || b->type_no == 33 || b->type_no == 35))
+                    return true;
+                if ((a->type_no == 34 || a->type_no == 36) && (b->type_no == 34 || b->type_no == 36))
+                    return true;
+            }
         }
         return false;
     }
@@ -484,8 +495,16 @@ bool Parser::type_match(Type *a, Type *b, int match_type) const {
         if (! match_type)
             return type_match(a->array_type, b->array_type, 0);
         else {
-            if (a->array_index_type != b->array_index_type)
-                return false;
+            if (match_type == 1) {
+                if (a->array_index_type != b->array_index_type)
+                    return false;
+            }
+            else {
+                if (a->array_index_type == -1)
+                    return true;
+                if (a->array_index_type != b->array_index_type)
+                    return false;
+            }
             if (a->array_index_type == 0) {
                 if (std::stoi(a->array_bias, 0, 0) != std::stoi(b->array_bias, 0, 0))
                     return false;
@@ -507,7 +526,7 @@ bool Parser::type_match(Type *a, Type *b, int match_type) const {
                 if (tmpa != tmpb)
                     return false;
             }
-            return type_match(a->array_type, b->array_type, 1);
+            return type_match(a->array_type, b->array_type, match_type);
         }
     if (a->category == 3 || a->category == 4)
         return a == b;
@@ -534,12 +553,39 @@ bool Parser::functype_match(FuncType *a, FuncType *b, int match_type) const {
     return true;
 }
 
+bool Parser::char_check(Token &token) {
+    Type *type = token.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    if (type->category != 0 || ! (type->type_no == 31 || (type->type_no == 33 && (token.is_literal || token.is_implicit) && token.str_len == 1))) {
+        output_error(token.line, token.col, token.pos, "incompatible types");
+        return false;
+    }
+    if (token.is_literal)
+        token.content = "'" + token.content + "'";
+    else
+        token.content = token.content + "[0]";
+    return true;
+}
+
 bool Parser::process_default(Token &new_token) {
     return true;
 }
 
 bool Parser::process_newline(Token &new_token) {
     result << "\n";
+    return true;
+}
+
+bool Parser::process_semicolon_newline(Token &new_token) {
+    result << ";\n";
+    return true;
+}
+
+bool Parser::process_indent(Token &new_token) {
+    for (int i = 0; i < indent; i++)
+        result << "\t";
     return true;
 }
 
@@ -625,6 +671,7 @@ bool Parser::process_string_constant_def(Token &new_token) {
     current_symbol_table->is_const[id_no] = true;
     current_symbol_table->const_val[id_no] = parsing_stack[parsing_stack.size() - 2].second.content;
     current_symbol_table->const_strlen[id_no] = parsing_stack[parsing_stack.size() - 2].second.str_len;
+    current_symbol_table->const_implicit_str[id_no] = true;
     return true;
 }
 
@@ -649,7 +696,19 @@ bool Parser::process_bool_constant_def(Token &new_token) {
     return true;
 }
 
-bool Parser::process_semicolon_newline(Token &new_token) {
+bool Parser::process_typed_constant_def(Token &new_token) {
+    int id_no = parsing_stack[parsing_stack.size() - 5].second.id_no;
+    Type *type = current_symbol_table->symbols[id_no];
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    if (type->category == 0 && (type->type_no <= 19 || type->type_no == 31 || type->type_no == 33)) {
+        current_symbol_table->const_val[id_no] = parsing_stack[parsing_stack.size() - 2].second.content;
+        if (type->type_no == 33) {
+            current_symbol_table->const_strlen[id_no] = parsing_stack[parsing_stack.size() - 2].second.str_len;
+            current_symbol_table->const_implicit_str[id_no] = false;
+        }
+    }
     result << ";\n";
     return true;
 }
@@ -872,6 +931,8 @@ bool Parser::process_no_sign_signed_integer(Token &new_token) {
     type->type_no = c_int.first;
     new_token.type = type;
     new_token.content = c_int.second;
+    new_token.is_const = true;
+    new_token.is_literal = true;
     return true;
 }
 
@@ -895,6 +956,8 @@ bool Parser::process_no_sign_signed_float(Token &new_token) {
     type->category = 0;
     type->type_no = 23;
     new_token.type = type;
+    new_token.is_const = true;
+    new_token.is_literal = true;
     return true;
 }
 
@@ -923,10 +986,11 @@ bool Parser::process_string(Token &new_token) {
     new_token.type = type;
     new_token.content = content.second;
     new_token.str_len = content.first;
+    new_token.is_const = true;
     return true;
 }
 
-bool Parser::process_array_index(Token &new_token) {
+bool Parser::process_array_subrange_index(Token &new_token) {
     if (parsing_stack.back().second.category == 2) {
         int id_no = parsing_stack.back().second.no;
         bool flag = false;
@@ -936,10 +1000,14 @@ bool Parser::process_array_index(Token &new_token) {
             if (p->defined(id_no)) {
                 if (p->is_const.count(id_no)) {
                     constant_flag = true;
-                    if (p->symbols[id_no]->category == 0 && (p->symbols[id_no]->type_no <= 19 || p->symbols[id_no]->type_no == 31 || (p->symbols[id_no]->type_no == 33 && p->const_strlen[id_no] == 1))) {
+                    Type *type = p->symbols[id_no];
+                    for (; type && type->category == 6; type = type->named_type);
+                    if (! type)
+                        return false;
+                    if (type->category == 0 && (type->type_no <= 19 || type->type_no == 31 || (type->type_no == 33 && p->const_implicit_str[id_no] && p->const_strlen[id_no] == 1))) {
                         new_token.type = p->symbols[id_no];
                         new_token.content = p->const_val[id_no];
-                        if (p->symbols[id_no]->type_no == 33)
+                        if (type->type_no == 33)
                             new_token.str_len = p->const_strlen[id_no];
                     }
                 }
@@ -1086,6 +1154,7 @@ bool Parser::process_const_type_declar(Token &new_token) {
     for (int i = 0; i < indent; i++)
         result << "\t";
     result << "const " << id_with_type(new_token.type, tmp) << " = ";
+    new_token.id_no = id_no;
     return true;
 }
 
@@ -1104,6 +1173,7 @@ bool Parser::process_num_const_val(Token &new_token) {
         return false;
     }
     result << parsing_stack.back().second.content;
+    new_token.content = parsing_stack.back().second.content;
     return true;
 }
 
@@ -1124,6 +1194,7 @@ bool Parser::process_string_const_val(Token &new_token) {
         return true;
     }
     result << "\"" << parsing_stack.back().second.content << "\"";
+    new_token.content = parsing_stack.back().second.content;
     return true;
 }
 
@@ -1608,6 +1679,208 @@ bool Parser::process_label_part(Token &new_token) {
     return true;
 }
 
+bool Parser::process_assign_statement(Token &new_token) {
+    Type *type = parsing_stack[parsing_stack.size() - 3].second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    if (type->category == 2) {
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "invalid array assignment");
+        return false;
+    }
+    if (type->category == 0 && type->type_no == 31)
+        if (! char_check(parsing_stack.back().second))
+            return false;
+    if (! type_match(parsing_stack[parsing_stack.size() - 3].second.type, parsing_stack.back().second.type, 2)) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
+        return false;
+    }
+    result << parsing_stack[parsing_stack.size() - 3].second.content << " = " << parsing_stack.back().second.content << ";\n";
+    return true;
+}
+
+bool Parser::process_id_var_access(Token &new_token) {
+    new_token.type = NULL;
+    int id_no = parsing_stack.back().second.no;
+    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
+        if (p->defined(id_no)) {
+            if (! p->symbols.count(id_no)) {
+                output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier type is not allowed");
+                return false;
+            }
+            new_token.type = p->symbols[id_no];
+            new_token.is_const = p->is_const[id_no];
+            if (new_token.type && new_token.type->category == 0 && new_token.type->type_no == 33 && new_token.is_const) {
+                new_token.str_len = p->const_strlen[id_no];
+                new_token.is_implicit = p->const_implicit_str[id_no];
+            }
+            break;
+        }
+    if (! new_token.type) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier is not defined");
+        return false;
+    }
+    new_token.content = no_token[id_no];
+    return true;
+}
+
+bool Parser::process_array_var_access(Token &new_token) {
+    new_token.type = parsing_stack[parsing_stack.size() - 2].second.type;
+    if (! new_token.type)
+        return false;
+    new_token.is_const = parsing_stack[parsing_stack.size() - 5].second.is_const;
+    new_token.content = parsing_stack[parsing_stack.size() - 5].second.content + parsing_stack[parsing_stack.size() - 2].second.content;
+    new_token.is_implicit = false;
+    return true;
+}
+
+bool Parser::process_member_var_access(Token &new_token) {
+    new_token.type = NULL;
+    Type *type = parsing_stack[parsing_stack.size() - 3].second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type || type->category != 4) {
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "invalid operation");
+        return false;
+    }
+    int id_no = parsing_stack.back().second.no;
+    bool flag = false;
+    for (int i = 0; i < type->record_list.size() && ! flag; i++)
+        for (int j = 0; j < type->record_list[i].first.size(); j++)
+            if (type->record_list[i].first[j] == id_no) {
+                new_token.type = type->record_list[i].second;
+                flag = true;
+                break;
+            }
+    if (! flag) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "record member not found");
+        return false;
+    }
+    new_token.is_const = parsing_stack[parsing_stack.size() - 3].second.is_const;
+    if (parsing_stack[parsing_stack.size() - 3].second.content.size() && parsing_stack[parsing_stack.size() - 3].second.content[0] == '*')
+        new_token.content = "(" + parsing_stack[parsing_stack.size() - 3].second.content + ")." + no_token[id_no];
+    else
+        new_token.content = parsing_stack[parsing_stack.size() - 3].second.content + "." + no_token[id_no];
+    new_token.is_implicit = false;
+    return true;
+}
+
+bool Parser::process_pointer_var_access(Token &new_token) {
+    Type *type = parsing_stack[parsing_stack.size() - 2].second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type || type->category != 1) {
+        new_token.type = NULL;
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "invalid operation");
+        return false;
+    }
+    new_token.type = type->pointer_type;
+    new_token.is_const = false;
+    new_token.content = "*" + parsing_stack[parsing_stack.size() - 2].second.content;
+    new_token.is_implicit = false;
+    return true;
+}
+
+bool Parser::process_M10(Token &new_token) {
+    new_token.type = parsing_stack[parsing_stack.size() - 2].second.type;
+    return true;
+}
+
+bool Parser::process_single_array_index_list(Token &new_token) {
+    new_token.type = NULL;
+    Type *type = parsing_stack[parsing_stack.size() - 2].second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    if (type->category != 2 || type->array_index_type == -1) {
+        output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "invalid operation");
+        return false;
+    }
+    Type *index_type = parsing_stack.back().second.type;
+    for (; index_type && index_type->category == 6; index_type = index_type->named_type);
+    if (! index_type)
+        return false;
+    if (type->array_index_type == 0) {
+        if (index_type->category != 0 || index_type->type_no > 19) {
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
+            return false;
+        }
+        new_token.type = type->array_type;
+        new_token.content = "[" + parsing_stack.back().second.content + "]";
+    }
+    else {
+        if (! char_check(parsing_stack.back().second))
+            return false;
+        new_token.type = type->array_type;
+        new_token.content = "[" + parsing_stack.back().second.content + "]";
+    }
+    return true;
+}
+
+bool Parser::process_array_index_list(Token &new_token) {
+    new_token.type = NULL;
+    Type *type = parsing_stack[parsing_stack.size() - 3].second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    if (type->category != 2 || type->array_index_type == -1) {
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "invalid operation");
+        return false;
+    }
+    Type *index_type = parsing_stack.back().second.type;
+    for (; index_type && index_type->category == 6; index_type = index_type->named_type);
+    if (! index_type)
+        return false;
+    new_token.content = parsing_stack[parsing_stack.size() - 2].second.content;
+    if (type->array_index_type == 0) {
+        if (index_type->category != 0 || index_type->type_no > 19) {
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
+            return false;
+        }
+        new_token.type = type->array_type;
+        new_token.content += "[" + parsing_stack.back().second.content + "]";
+    }
+    else {
+       if (! char_check(parsing_stack.back().second))
+            return false;
+        new_token.type = type->array_type;
+        new_token.content = "[" + parsing_stack.back().second.content + "]";
+    }
+    return true;
+}
+
+bool Parser::process_string_const_expression(Token &new_token) {
+    new_token.type = parsing_stack.back().second.type;
+    new_token.content = parsing_stack.back().second.content;
+    new_token.is_const = parsing_stack.back().second.is_const;
+    new_token.str_len = parsing_stack.back().second.str_len;
+    new_token.is_literal = true;
+    new_token.is_implicit = false;
+    return true;
+}
+
+bool Parser::process_bool_const_expression(Token &new_token) {
+    new_token.type = new Type;
+    new_token.type->category = 0;
+    new_token.type->type_no = 27;
+    new_token.is_const = true;
+    if (parsing_stack.back().second.no == 45)
+        new_token.content = "true";
+    else
+        new_token.content = "false";
+    new_token.is_literal = true;
+    new_token.is_implicit = false;
+    return true;
+}
+
+bool Parser::process_var_access_expression(Token &new_token) {
+    new_token.type = parsing_stack.back().second.type;
+    new_token.content = parsing_stack.back().second.content;
+    new_token.is_const = parsing_stack.back().second.is_const;
+    new_token.str_len = parsing_stack.back().second.str_len;
+    new_token.is_literal = false;
+    new_token.is_implicit = parsing_stack.back().second.is_implicit;
+    return true;
+}
+
 void Parser::grammar_init() {
     Generation tmp;
     //program' = program
@@ -1823,7 +2096,7 @@ void Parser::grammar_init() {
     tmp.right.clear();
     tmp.right.push_back(Symbol(2, 0));
     tmp.right.push_back(Symbol(6, 0));
-    tmp.right.push_back(Symbol(0, 45));
+    tmp.right.push_back(Symbol(0, 44));
     tmp.right.push_back(Symbol(7, 3));
     tmp.process = &Parser::process_bool_constant_def;
     grammar.push_back(tmp);
@@ -1846,13 +2119,13 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(-1, 29));
     tmp.right.push_back(Symbol(-1, 30));
     tmp.right.push_back(Symbol(7, 3));
-    tmp.process = &Parser::process_semicolon_newline;
+    tmp.process = &Parser::process_typed_constant_def;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //type-definition-part = 'type' type-definitions
     tmp.left = 12;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(0, 46));
+    tmp.right.push_back(Symbol(0, 45));
     tmp.right.push_back(Symbol(-1, 13));
     tmp.process = &Parser::process_newline;
     grammar.push_back(tmp);
@@ -1976,7 +2249,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_array_subrange_list;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //subrange = array-index '..' array-index
+    //subrange = array-subrange-index '..' array-subrange-index
     tmp.left = 18;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 22));
@@ -2038,25 +2311,25 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_string;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //array-index = identifier
+    //array-subrange-index = identifier
     tmp.left = 22;
     tmp.right.clear();
     tmp.right.push_back(Symbol(2, 0));
-    tmp.process = &Parser::process_array_index;
+    tmp.process = &Parser::process_array_subrange_index;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //array-index = signed-integer
+    //array-subrange-index = signed-integer
     tmp.left = 22;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 19));
-    tmp.process = &Parser::process_array_index;
+    tmp.process = &Parser::process_array_subrange_index;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //array-index = string
+    //array-subrange-index = string
     tmp.left = 22;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 21));
-    tmp.process = &Parser::process_array_index;
+    tmp.process = &Parser::process_array_subrange_index;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //enum-list = enum-item
@@ -2171,7 +2444,7 @@ void Parser::grammar_init() {
     //const-val = true
     tmp.left = 30;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(0, 45));
+    tmp.right.push_back(Symbol(0, 44));
     tmp.process = &Parser::process_bool_const_val;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
@@ -2292,7 +2565,7 @@ void Parser::grammar_init() {
     //variable-definition-part = 'var' var-definitions
     tmp.left = 39;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(0, 50));
+    tmp.right.push_back(Symbol(0, 49));
     tmp.right.push_back(Symbol(-1, 40));
     tmp.process = &Parser::process_newline;
     grammar.push_back(tmp);
@@ -2350,7 +2623,7 @@ void Parser::grammar_init() {
     tmp.left = 44;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 46));
-    tmp.right.push_back(Symbol(0, 54));
+    tmp.right.push_back(Symbol(0, 53));
     tmp.right.push_back(Symbol(7, 3));
     tmp.process = &Parser::process_proc_func_declar;
     grammar.push_back(tmp);
@@ -2368,7 +2641,7 @@ void Parser::grammar_init() {
     tmp.left = 45;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 47));
-    tmp.right.push_back(Symbol(0, 54));
+    tmp.right.push_back(Symbol(0, 53));
     tmp.right.push_back(Symbol(7, 3));
     tmp.process = &Parser::process_proc_func_declar;
     grammar.push_back(tmp);
@@ -2460,7 +2733,7 @@ void Parser::grammar_init() {
     //formal-parameter-specification = var identifier-list ':' type-identifier
     tmp.left = 49;
     tmp.right.clear();
-    tmp.right.push_back(Symbol(0, 50));
+    tmp.right.push_back(Symbol(0, 49));
     tmp.right.push_back(Symbol(-1, 27));
     tmp.right.push_back(Symbol(7, 2));
     tmp.right.push_back(Symbol(-1, 50));
@@ -2614,17 +2887,18 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //statement-with-labels = ε
-    tmp.left = 60;
-    tmp.right.clear();
-    tmp.process = &Parser::process_default;
-    grammar.push_back(tmp);
-    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //statement-with-labels = label-part statement-with-labels
     tmp.left = 60;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 61));
     tmp.right.push_back(Symbol(-1, 60));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement-with-labels = statement
+    tmp.left = 60;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 62));
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
@@ -2634,6 +2908,127 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(3, 0));
     tmp.right.push_back(Symbol(7, 2));
     tmp.process = &Parser::process_label_part;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = ε
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 variable-access ':=' expression
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(-1, 64));
+    tmp.right.push_back(Symbol(6, 1));
+    tmp.right.push_back(Symbol(-1, 67));
+    tmp.process = &Parser::process_assign_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M9 = ε
+    tmp.left = 63;
+    tmp.right.clear();
+    tmp.process = &Parser::process_indent;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //variable-access = identifier
+    tmp.left = 64;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.process = &Parser::process_id_var_access;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //variable-access = variable-access '[' M10 array-index-list ']'
+    tmp.left = 64;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 64));
+    tmp.right.push_back(Symbol(7, 6));
+    tmp.right.push_back(Symbol(-1, 65));
+    tmp.right.push_back(Symbol(-1, 66));
+    tmp.right.push_back(Symbol(7, 7));
+    tmp.process = &Parser::process_array_var_access;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //variable-access = variable-access '.' identifier
+    tmp.left = 64;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 64));
+    tmp.right.push_back(Symbol(7, 0));
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.process = &Parser::process_member_var_access;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //variable-access = variable-access '^'
+    tmp.left = 64;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 64));
+    tmp.right.push_back(Symbol(6, 14));
+    tmp.process = &Parser::process_pointer_var_access;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M10 = ε
+    tmp.left = 65;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M10;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //array-index-list = expression
+    tmp.left = 66;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 67));
+    tmp.process = &Parser::process_single_array_index_list;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //array-index-list = array-index-list ',' expression
+    tmp.left = 66;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 66));
+    tmp.right.push_back(Symbol(7, 1));
+    tmp.right.push_back(Symbol(-1, 67));
+    tmp.process = &Parser::process_array_index_list;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //expression = integer-literal
+    tmp.left = 67;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(3, 0));
+    tmp.process = &Parser::process_no_sign_signed_integer;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //expression = float-literal
+    tmp.left = 67;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(4, 0));
+    tmp.process = &Parser::process_no_sign_signed_float;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //expression = string
+    tmp.left = 67;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 21));
+    tmp.process = &Parser::process_string_const_expression;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //expression = true
+    tmp.left = 67;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 44));
+    tmp.process = &Parser::process_bool_const_expression;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //expression = false
+    tmp.left = 67;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 15));
+    tmp.process = &Parser::process_bool_const_expression;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //expression = variable-access
+    tmp.left = 67;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 64));
+    tmp.process = &Parser::process_var_access_expression;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }

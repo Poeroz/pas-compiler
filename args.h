@@ -57,19 +57,18 @@
         39: set
         40: shl
         41: shr
-        42: string
-        43: then
-        44: to
-        45: true
-        46: type
-        47: unit
-        48: until
-        49: uses
-        50: var
-        51: while
-        52: with
-        53: xor
-        54: forward
+        42: then
+        43: to
+        44: true
+        45: type
+        46: unit
+        47: until
+        48: uses
+        49: var
+        50: while
+        51: with
+        52: xor
+        53: forward
     1: data types
         0: uint8
         1: byte
@@ -238,9 +237,11 @@ struct Token {
         int str_len;
         int array_len;
         int id_num;
+        int id_no;
     };
     std::unordered_set<int> record_defined_ids;
     Type *type;
+    bool is_const, is_implicit, is_literal;
     Token();
     Token(int category, int no, int line = 1, int col = 1, int pos = 0, std::string content = "");
     Token(Symbol s);
@@ -273,6 +274,7 @@ struct SymbolTable {
     std::unordered_map<int, bool> is_const;
     std::unordered_map<int, std::string> const_val; //for integers, floats and strings
     std::unordered_map<int, int> const_strlen; //for const strings
+    std::unordered_map<int, bool> const_implicit_str; //for const strings
     std::unordered_map<int, std::vector<SymbolTable*> > subtable;
     std::unordered_set<int> enum_items;
     bool defined(int no) const;

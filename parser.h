@@ -33,15 +33,18 @@ private:
     std::string id_with_type(Type *type, std::vector<std::string> id_list, std::string struct_name = "");
     bool type_match(Type *a, Type *b, int match_type = 1) const; // 0 -- exclusive 1 -- match
     bool functype_match(FuncType *a, FuncType *b, int match_type = 1) const; // 0 -- exclusive 1 -- match
+    bool char_check(Token &token);
     bool process_default(Token &new_token);
     bool process_newline(Token &new_token);
     bool process_semicolon_newline(Token &new_token);
+    bool process_indent(Token &new_token);
     bool process_M1(Token &new_token);
     bool process_label(Token &new_token);
     bool process_int_constant_def(Token &new_token);
     bool process_float_constant_def(Token &new_token);
     bool process_string_constant_def(Token &new_token);
     bool process_bool_constant_def(Token &new_token);
+    bool process_typed_constant_def(Token &new_token);
     bool process_type_def(Token &new_token);
     bool process_type_name(Token &new_token);
     bool process_id_type_denoter(Token &new_token);
@@ -59,7 +62,7 @@ private:
     bool process_no_sign_signed_float(Token &new_token);
     bool process_signed_float(Token &new_token);
     bool process_string(Token &new_token);
-    bool process_array_index(Token &new_token);
+    bool process_array_subrange_index(Token &new_token);
     bool process_single_enum_list(Token &new_token);
     bool process_enum_list(Token &new_token);
     bool process_enum_item(Token &new_token);
@@ -101,6 +104,17 @@ private:
     bool process_program_statement(Token &new_token);
     bool process_M8(Token &new_token);
     bool process_label_part(Token &new_token);
+    bool process_assign_statement(Token &new_token);
+    bool process_id_var_access(Token &new_token);
+    bool process_array_var_access(Token &new_token);
+    bool process_member_var_access(Token &new_token);
+    bool process_pointer_var_access(Token &new_token);
+    bool process_M10(Token &new_token);
+    bool process_single_array_index_list(Token &new_token);
+    bool process_array_index_list(Token &new_token);
+    bool process_string_const_expression(Token &new_token);
+    bool process_bool_const_expression(Token &new_token);
+    bool process_var_access_expression(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);
