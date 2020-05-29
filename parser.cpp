@@ -9,7 +9,7 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 68;
+int Parser::num_nonterminal = 69;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
@@ -1695,6 +1695,10 @@ bool Parser::process_assign_statement(Token &new_token) {
         output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
         return false;
     }
+    if (parsing_stack[parsing_stack.size() - 3].second.is_const) {
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "assignment of constant");
+        return false;
+    }
     result << parsing_stack[parsing_stack.size() - 3].second.content << " = " << parsing_stack.back().second.content << ";\n";
     return true;
 }
@@ -1790,6 +1794,21 @@ bool Parser::process_single_array_index_list(Token &new_token) {
     for (; type && type->category == 6; type = type->named_type);
     if (! type)
         return false;
+    if (type->category == 0 && type->type_no == 33) {
+        Type *index_type = parsing_stack.back().second.type;
+        for (; index_type && index_type->category == 6; index_type = index_type->named_type);
+        if (! index_type)
+            return false;
+        if (index_type->category != 0 || index_type->type_no > 19) {
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
+            return false;
+        }
+        new_token.type = new Type;
+        new_token.type->category = 0;
+        new_token.type->type_no = 31;
+        new_token.content = "[" + parsing_stack.back().second.content + " - 1]";
+        return true;
+    }
     if (type->category != 2 || type->array_index_type == -1) {
         output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "invalid operation");
         return false;
@@ -1804,13 +1823,13 @@ bool Parser::process_single_array_index_list(Token &new_token) {
             return false;
         }
         new_token.type = type->array_type;
-        new_token.content = "[" + parsing_stack.back().second.content + "]";
+        new_token.content = "[" + parsing_stack.back().second.content + " - " + type->array_bias + "]";
     }
     else {
         if (! char_check(parsing_stack.back().second))
             return false;
         new_token.type = type->array_type;
-        new_token.content = "[" + parsing_stack.back().second.content + "]";
+        new_token.content = "[" + parsing_stack.back().second.content + " - '" + type->array_bias + "']";
     }
     return true;
 }
@@ -1878,6 +1897,31 @@ bool Parser::process_var_access_expression(Token &new_token) {
     new_token.str_len = parsing_stack.back().second.str_len;
     new_token.is_literal = false;
     new_token.is_implicit = parsing_stack.back().second.is_implicit;
+    return true;
+}
+
+bool Parser::process_single_expression(Token &new_token) {
+    new_token.type = parsing_stack.back().second.type;
+    new_token.content = parsing_stack.back().second.content;
+    new_token.is_const = parsing_stack.back().second.is_const;
+    new_token.str_len = parsing_stack.back().second.str_len;
+    new_token.is_literal = parsing_stack.back().second.is_literal;
+    new_token.is_implicit = parsing_stack.back().second.is_implicit;
+    return true;
+}
+
+bool Parser::process_not_expression(Token &new_token) {
+    new_token.type = new Type;
+    new_token.type->category = 0;
+    new_token.type->type_no = 27;
+    new_token.is_const = true;
+    new_token.is_literal = false;
+    new_token.is_implicit = false;
+    if (! type_match(new_token.type, parsing_stack.back().second.type, 2)) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
+        return false;
+    }
+    new_token.content = "! " + parsing_stack.back().second.content;
     return true;
 }
 
@@ -2989,46 +3033,61 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_array_index_list;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //expression = integer-literal
+    //basic-expression = integer-literal
     tmp.left = 67;
     tmp.right.clear();
     tmp.right.push_back(Symbol(3, 0));
     tmp.process = &Parser::process_no_sign_signed_integer;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //expression = float-literal
+    //basic-expression = float-literal
     tmp.left = 67;
     tmp.right.clear();
     tmp.right.push_back(Symbol(4, 0));
     tmp.process = &Parser::process_no_sign_signed_float;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //expression = string
+    //basic-expression = string
     tmp.left = 67;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 21));
     tmp.process = &Parser::process_string_const_expression;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //expression = true
+    //basic-expression = true
     tmp.left = 67;
     tmp.right.clear();
     tmp.right.push_back(Symbol(0, 44));
     tmp.process = &Parser::process_bool_const_expression;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //expression = false
+    //basic-expression = false
     tmp.left = 67;
     tmp.right.clear();
     tmp.right.push_back(Symbol(0, 15));
     tmp.process = &Parser::process_bool_const_expression;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //expression = variable-access
+    //basic-expression = variable-access
     tmp.left = 67;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 64));
     tmp.process = &Parser::process_var_access_expression;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //first-expression = basic-expression
+    tmp.left = 68;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 67));
+    tmp.process = &Parser::process_single_expression;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //first-expression = not first-expression
+    tmp.left = 68;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 28));
+    tmp.right.push_back(Symbol(-1, 68));
+    tmp.process = &Parser::process_not_expression;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }

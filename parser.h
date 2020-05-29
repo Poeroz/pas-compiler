@@ -115,6 +115,8 @@ private:
     bool process_string_const_expression(Token &new_token);
     bool process_bool_const_expression(Token &new_token);
     bool process_var_access_expression(Token &new_token);
+    bool process_single_expression(Token &new_token);
+    bool process_not_expression(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);
