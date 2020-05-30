@@ -32,7 +32,7 @@ bool Type::no_constructed_type() const {
 }
 
 bool Type::can_be_defined_in_set() const {
-    return category == 0 || (category == 1 && pointer_type->no_constructed_type()) || (category == 6 && named_type->is_base_type());
+    return (category == 0 && (type_no == 0 || type_no == 1 || type_no == 27 || type_no == 31)) || (category == 6 && named_type->is_base_type());
 }
 
 Token::Token() {}

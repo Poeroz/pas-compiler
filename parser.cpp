@@ -1544,64 +1544,6 @@ bool Parser::process_formal_parameter_spec_const(Token &new_token) {
     return true;
 }
 
-bool Parser::process_id_type_identifier(Token &new_token) {
-    int id_no = parsing_stack.back().second.no;
-    Type *tmp = NULL;
-    bool flag = false;
-    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
-        if (p->defined(id_no)) {
-            if (p->named_types.count(id_no))
-                tmp = p->named_types[id_no];
-            flag = true;
-            break;
-        }
-    if (! tmp) {
-        if (! flag)
-            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier has not been defined");
-        else
-            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier is not a type");
-        new_token.type = NULL;
-        return false;
-    }
-    new_token.type = tmp;
-    return true;
-}
-
-bool Parser::process_basic_type_identifier(Token &new_token) {
-    int id_no = parsing_stack.back().second.no;
-    new_token.type = new Type;
-    if (id_no == 37) {
-        new_token.type->category = 1;
-        new_token.type->pointer_type = new Type;
-        new_token.type->pointer_type->category = 0;
-        new_token.type->pointer_type->type_no = 37;
-        return true;
-    }
-    new_token.type->category = 0;
-    if (id_no >= 6 && id_no <= 8)
-        id_no = 5;
-    else
-        if (id_no == 15)
-            id_no = 14;
-        else
-            if (id_no == 21)
-                id_no = 20;
-            else
-                if (id_no == 22 || id_no == 25 || id_no == 26)
-                    id_no = 23;
-                else
-                    if (id_no >= 28 && id_no <= 30)
-                        id_no = 27;
-                    else
-                        if (id_no == 32)
-                            id_no = 33;
-                        else
-                            if (id_no >= 34 && id_no <= 36)
-                                id_no = 33;
-    new_token.type->type_no = id_no;
-    return true;
-}
-
 bool Parser::process_array_type_identifier(Token &new_token) {
     new_token.type = new Type;
     new_token.type->category = 2;
@@ -1911,17 +1853,45 @@ bool Parser::process_single_expression(Token &new_token) {
 }
 
 bool Parser::process_not_expression(Token &new_token) {
-    new_token.type = new Type;
-    new_token.type->category = 0;
-    new_token.type->type_no = 27;
-    new_token.is_const = true;
-    new_token.is_literal = false;
-    new_token.is_implicit = false;
-    if (! type_match(new_token.type, parsing_stack.back().second.type, 2)) {
+    Type *type = parsing_stack.back().second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    if (type->category != 0 || ! (type->type_no <= 19 || (type->type_no >= 27 && type->type_no <= 30))) {
         output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
         return false;
     }
-    new_token.content = "! " + parsing_stack.back().second.content;
+    new_token.type = new Type;
+    new_token.type->category = 0;
+    new_token.type->type_no = type->type_no;
+    new_token.is_const = true;
+    new_token.is_literal = false;
+    new_token.is_implicit = false;
+    if (type->type_no <= 19)
+        new_token.content = "~ " + parsing_stack.back().second.content;
+    else
+        new_token.content = "! " + parsing_stack.back().second.content;
+    return true;
+}
+
+bool Parser::process_address_expression(Token &new_token) {
+    Type *type = parsing_stack.back().second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    new_token.type = new Type;
+    new_token.type->category = 1;
+    if (type->category == 2) {
+        new_token.type->pointer_type = type->array_type;
+        new_token.content = parsing_stack.back().second.content;
+    }
+    else {
+        new_token.type->pointer_type = parsing_stack.back().second.type;
+        new_token.content = "& " + parsing_stack.back().second.content;
+    }
+    new_token.is_const = true;
+    new_token.is_literal = false;
+    new_token.is_implicit = false;
     return true;
 }
 
@@ -2220,11 +2190,11 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_basic_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //type-denoter = '^' type-denoter
+    //type-denoter = '^' no-array-type-identifier
     tmp.left = 16;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 14));
-    tmp.right.push_back(Symbol(-1, 16));
+    tmp.right.push_back(Symbol(-1, 51));
     tmp.process = &Parser::process_pointer_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
@@ -2798,14 +2768,14 @@ void Parser::grammar_init() {
     tmp.left = 50;
     tmp.right.clear();
     tmp.right.push_back(Symbol(2, 0));
-    tmp.process = &Parser::process_id_type_identifier;
+    tmp.process = &Parser::process_id_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //type-identifier = origin-type
     tmp.left = 50;
     tmp.right.clear();
     tmp.right.push_back(Symbol(1, 0));
-    tmp.process = &Parser::process_basic_type_identifier;
+    tmp.process = &Parser::process_basic_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //type-identifier = array of type-identifier
@@ -2821,14 +2791,14 @@ void Parser::grammar_init() {
     tmp.left = 51;
     tmp.right.clear();
     tmp.right.push_back(Symbol(2, 0));
-    tmp.process = &Parser::process_id_type_identifier;
+    tmp.process = &Parser::process_id_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //no-array-type-identifier = origin-type
     tmp.left = 51;
     tmp.right.clear();
     tmp.right.push_back(Symbol(1, 0));
-    tmp.process = &Parser::process_basic_type_identifier;
+    tmp.process = &Parser::process_basic_type_denoter;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //M6 = ε
@@ -3088,6 +3058,14 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(0, 28));
     tmp.right.push_back(Symbol(-1, 68));
     tmp.process = &Parser::process_not_expression;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //first-expression = @ first-expression
+    tmp.left = 68;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(6, 15));
+    tmp.right.push_back(Symbol(-1, 68));
+    tmp.process = &Parser::process_address_expression;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }
