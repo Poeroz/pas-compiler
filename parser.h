@@ -33,6 +33,7 @@ private:
     std::string id_with_type(Type *type, std::vector<std::string> id_list, std::string struct_name = "");
     bool type_match(Type *a, Type *b, int match_type = 1) const; // 0 -- exclusive 1 -- match
     bool functype_match(FuncType *a, FuncType *b, int match_type = 1) const; // 0 -- exclusive 1 -- match
+    Type *arithmetic_type_check(Type *a, Type *b);
     bool process_default(Token &new_token);
     bool process_newline(Token &new_token);
     bool process_semicolon_newline(Token &new_token);
@@ -112,10 +113,29 @@ private:
     bool process_string_const_expression(Token &new_token);
     bool process_bool_const_expression(Token &new_token);
     bool process_single_expression(Token &new_token);
+    bool process_bracket_expression(Token &new_token);
     bool process_not_expression(Token &new_token);
     bool process_address_expression(Token &new_token);
     bool process_unary_add_expression(Token &new_token);
     bool process_unary_subtract_expression(Token &new_token);
+    bool process_multiply_expression(Token &new_token);
+    bool process_division_expression(Token &new_token);
+    bool process_integer_division_expression(Token &new_token);
+    bool process_modulo_expression(Token &new_token);
+    bool process_and_expression(Token &new_token);
+    bool process_left_shift_expression(Token &new_token);
+    bool process_right_shift_expression(Token &new_token);
+    bool process_add_expression(Token &new_token);
+    bool process_subtract_expression(Token &new_token);
+    bool process_or_expression(Token &new_token);
+    bool process_xor_expression(Token &new_token);
+    bool process_equal_expression(Token &new_token);
+    bool process_not_equal_expression(Token &new_token);
+    bool process_less_than_expression(Token &new_token);
+    bool process_greater_than_expression(Token &new_token);
+    bool process_less_than_equal_expression(Token &new_token);
+    bool process_greater_than_equal_expression(Token &new_token);
+    bool process_in_expression(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);

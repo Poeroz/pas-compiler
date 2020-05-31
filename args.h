@@ -274,7 +274,7 @@ struct SymbolTable {
     std::unordered_map<int, bool> is_const;
     std::unordered_map<int, std::string> const_val; //for integers, floats and strings
     std::unordered_map<int, std::vector<SymbolTable*> > subtable;
-    std::unordered_set<int> enum_items;
+    std::unordered_map<int, Type*> enum_items;
     bool defined(int no) const;
     bool defined_except_func(int no) const;
 };
