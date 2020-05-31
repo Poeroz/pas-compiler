@@ -9,7 +9,7 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 69;
+int Parser::num_nonterminal = 70;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
@@ -28,101 +28,46 @@ std::pair<int, std::string> Parser::pas_int_to_c(int sign, std::string s) const 
     if (! sign)
         if (isdigit(s[0])) {
             for (; s.length() > 1 && s[0] == '0'; s = s.substr(1));
-            if (s.length() < 5 || (s.length() == 5 && s < "65536"))
-                res.first = 3;
-            else
-                if (s.length() < 10 || (s.length() == 10 && s < "4294967296"))
-                    res.first = 7;
-                else
-                    res.first = 10;
         }
         else
             if (s[0] == '%') {
                 s = s.substr(1);
                 for (; s.length() > 1 && s[0] == '0'; s = s.substr(1));
-                if (s.length() <= 16)
-                    res.first = 3;
-                else
-                    if (s.length() <= 32)
-                        res.first = 7;
-                    else
-                        res.first = 10;
                 s = "0b" + s;
             }
             else
                 if (s[0] == '&') {
                     s = s.substr(1);
                     for (; s.length() > 1 && s[0] == '0'; s = s.substr(1));
-                    if (s.length() < 6 || (s.length() == 6 && s < "200000"))
-                        res.first = 3;
-                    else
-                        if (s.length() < 11 || (s.length() == 11 && s < "40000000000"))
-                            res.first = 7;
-                        else
-                            res.first = 10;
                     s = "0" + s;
                 }
                 else {
                     s = s.substr(1);
                     for (; s.length() > 1 && s[0] == '0'; s = s.substr(1));
-                    if (s.length() <= 4)
-                        res.first = 3;
-                    else
-                        if (s.length() <= 8)
-                            res.first = 7;
-                        else
-                            res.first = 10;
                     s = "0x" + s;
                 }
     else
         if (isdigit(s[0])) {
             for (; s.length() > 1 && s[0] == '0'; s = s.substr(1));
-            if (s.length() < 5 || (s.length() == 5 && s <= "32768"))
-                res.first = 14;
-            else
-                if (s.length() < 10 || (s.length() == 10 && s <= "2147483648"))
-                    res.first = 17;
-                else
-                    res.first = 19;
         }
         else
             if (s[0] == '%') {
                 s = s.substr(1);
                 for (; s.length() > 1 && s[0] == '0'; s = s.substr(1));
-                if (s.length() < 16 || (s.length() == 16 && s == "1000000000000000"))
-                    res.first = 14;
-                else
-                    if (s.length() < 32 || (s.length() == 32 && s == "10000000000000000000000000000000"))
-                        res.first = 17;
-                    else
-                        res.first = 19;
                 s = "0b" + s;
             }
             else
                 if (s[0] == '&') {
                     s = s.substr(1);
                     for (; s.length() > 1 && s[0] == '0'; s = s.substr(1));
-                    if (s.length() < 6 || (s.length() == 6 && s == "100000"))
-                        res.first = 14;
-                    else
-                        if (s.length() < 11 || (s.length() == 11 && s <= "20000000000"))
-                            res.first = 17;
-                        else
-                            res.first = 19;
                     s = "0" + s;
                 }
                 else {
                     s = s.substr(1);
                     for (; s.length() > 1 && s[0] == '0'; s = s.substr(1));
-                    if (s.length() < 4 || (s.length() == 4 && s <= "8000"))
-                        res.first = 14;
-                    else
-                        if (s.length() < 8 || (s.length() == 8 && s <= "80000000"))
-                            res.first = 17;
-                        else
-                            res.first = 19;
                     s = "0x" + s;
                 }
+    res.first = 19;
     res.second = s;
     return res;
 }
@@ -553,22 +498,6 @@ bool Parser::functype_match(FuncType *a, FuncType *b, int match_type) const {
     return true;
 }
 
-bool Parser::char_check(Token &token) {
-    Type *type = token.type;
-    for (; type && type->category == 6; type = type->named_type);
-    if (! type)
-        return false;
-    if (type->category != 0 || ! (type->type_no == 31 || (type->type_no == 33 && (token.is_literal || token.is_implicit) && token.str_len == 1))) {
-        output_error(token.line, token.col, token.pos, "incompatible types");
-        return false;
-    }
-    if (token.is_literal)
-        token.content = "'" + token.content + "'";
-    else
-        token.content = token.content + "[0]";
-    return true;
-}
-
 bool Parser::process_default(Token &new_token) {
     return true;
 }
@@ -666,12 +595,13 @@ bool Parser::process_string_constant_def(Token &new_token) {
     }
     for (int i = 0; i < indent; i++)
         result << "\t";
-    result << "const std::string " << no_token[id_no] << " = \"" << parsing_stack[parsing_stack.size() - 2].second.content << "\";\n";
+    if (parsing_stack[parsing_stack.size() - 2].second.type->type_no == 31)
+        result << "const char " << no_token[id_no] << " = '" << parsing_stack[parsing_stack.size() - 2].second.content << "';\n";
+    else
+        result << "const std::string " << no_token[id_no] << " = \"" << parsing_stack[parsing_stack.size() - 2].second.content << "\";\n";
     current_symbol_table->symbols[id_no] = parsing_stack[parsing_stack.size() - 2].second.type;
     current_symbol_table->is_const[id_no] = true;
     current_symbol_table->const_val[id_no] = parsing_stack[parsing_stack.size() - 2].second.content;
-    current_symbol_table->const_strlen[id_no] = parsing_stack[parsing_stack.size() - 2].second.str_len;
-    current_symbol_table->const_implicit_str[id_no] = true;
     return true;
 }
 
@@ -702,13 +632,8 @@ bool Parser::process_typed_constant_def(Token &new_token) {
     for (; type && type->category == 6; type = type->named_type);
     if (! type)
         return false;
-    if (type->category == 0 && (type->type_no <= 19 || type->type_no == 31 || type->type_no == 33)) {
+    if (type->category == 0 && (type->type_no <= 19 || type->type_no == 31 || type->type_no == 33))
         current_symbol_table->const_val[id_no] = parsing_stack[parsing_stack.size() - 2].second.content;
-        if (type->type_no == 33) {
-            current_symbol_table->const_strlen[id_no] = parsing_stack[parsing_stack.size() - 2].second.str_len;
-            current_symbol_table->const_implicit_str[id_no] = false;
-        }
-    }
     result << ";\n";
     return true;
 }
@@ -932,7 +857,6 @@ bool Parser::process_no_sign_signed_integer(Token &new_token) {
     new_token.type = type;
     new_token.content = c_int.second;
     new_token.is_const = true;
-    new_token.is_literal = true;
     return true;
 }
 
@@ -957,7 +881,6 @@ bool Parser::process_no_sign_signed_float(Token &new_token) {
     type->type_no = 23;
     new_token.type = type;
     new_token.is_const = true;
-    new_token.is_literal = true;
     return true;
 }
 
@@ -982,7 +905,10 @@ bool Parser::process_string(Token &new_token) {
     }
     Type *type = new Type;
     type->category = 0;
-    type->type_no = 33;
+    if (content.first == 1)
+        type->type_no = 31;
+    else
+        type->type_no = 33;
     new_token.type = type;
     new_token.content = content.second;
     new_token.str_len = content.first;
@@ -1004,11 +930,9 @@ bool Parser::process_array_subrange_index(Token &new_token) {
                     for (; type && type->category == 6; type = type->named_type);
                     if (! type)
                         return false;
-                    if (type->category == 0 && (type->type_no <= 19 || type->type_no == 31 || (type->type_no == 33 && p->const_implicit_str[id_no] && p->const_strlen[id_no] == 1))) {
+                    if (type->category == 0 && (type->type_no <= 19 || type->type_no == 31)) {
                         new_token.type = p->symbols[id_no];
                         new_token.content = p->const_val[id_no];
-                        if (type->type_no == 33)
-                            new_token.str_len = p->const_strlen[id_no];
                     }
                 }
                 flag = true;
@@ -1027,15 +951,8 @@ bool Parser::process_array_subrange_index(Token &new_token) {
         return true;
     }
     else {
-        if (parsing_stack.back().second.type->type_no == 33 && parsing_stack.back().second.str_len != 1) {
-            new_token.type = NULL;
-            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible type");
-            return false;
-        }
         new_token.type = parsing_stack.back().second.type;
         new_token.content = parsing_stack.back().second.content;
-        if (parsing_stack.back().second.type->type_no == 33)
-            new_token.str_len = parsing_stack.back().second.str_len;
         return true;
     }
 }
@@ -1630,9 +1547,6 @@ bool Parser::process_assign_statement(Token &new_token) {
         output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "invalid array assignment");
         return false;
     }
-    if (type->category == 0 && type->type_no == 31)
-        if (! char_check(parsing_stack.back().second))
-            return false;
     if (! type_match(parsing_stack[parsing_stack.size() - 3].second.type, parsing_stack.back().second.type, 2)) {
         output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
         return false;
@@ -1656,10 +1570,6 @@ bool Parser::process_id_var_access(Token &new_token) {
             }
             new_token.type = p->symbols[id_no];
             new_token.is_const = p->is_const[id_no];
-            if (new_token.type && new_token.type->category == 0 && new_token.type->type_no == 33 && new_token.is_const) {
-                new_token.str_len = p->const_strlen[id_no];
-                new_token.is_implicit = p->const_implicit_str[id_no];
-            }
             break;
         }
     if (! new_token.type) {
@@ -1676,7 +1586,6 @@ bool Parser::process_array_var_access(Token &new_token) {
         return false;
     new_token.is_const = parsing_stack[parsing_stack.size() - 5].second.is_const;
     new_token.content = parsing_stack[parsing_stack.size() - 5].second.content + parsing_stack[parsing_stack.size() - 2].second.content;
-    new_token.is_implicit = false;
     return true;
 }
 
@@ -1706,7 +1615,6 @@ bool Parser::process_member_var_access(Token &new_token) {
         new_token.content = "(" + parsing_stack[parsing_stack.size() - 3].second.content + ")." + no_token[id_no];
     else
         new_token.content = parsing_stack[parsing_stack.size() - 3].second.content + "." + no_token[id_no];
-    new_token.is_implicit = false;
     return true;
 }
 
@@ -1721,7 +1629,6 @@ bool Parser::process_pointer_var_access(Token &new_token) {
     new_token.type = type->pointer_type;
     new_token.is_const = false;
     new_token.content = "*" + parsing_stack[parsing_stack.size() - 2].second.content;
-    new_token.is_implicit = false;
     return true;
 }
 
@@ -1768,8 +1675,10 @@ bool Parser::process_single_array_index_list(Token &new_token) {
         new_token.content = "[" + parsing_stack.back().second.content + " - " + type->array_bias + "]";
     }
     else {
-        if (! char_check(parsing_stack.back().second))
+        if (index_type->category != 0 || index_type->type_no != 31) {
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
             return false;
+        }
         new_token.type = type->array_type;
         new_token.content = "[" + parsing_stack.back().second.content + " - '" + type->array_bias + "']";
     }
@@ -1800,8 +1709,10 @@ bool Parser::process_array_index_list(Token &new_token) {
         new_token.content += "[" + parsing_stack.back().second.content + "]";
     }
     else {
-       if (! char_check(parsing_stack.back().second))
+        if (index_type->category != 0 || index_type->type_no != 31) {
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
             return false;
+        }
         new_token.type = type->array_type;
         new_token.content = "[" + parsing_stack.back().second.content + "]";
     }
@@ -1810,11 +1721,11 @@ bool Parser::process_array_index_list(Token &new_token) {
 
 bool Parser::process_string_const_expression(Token &new_token) {
     new_token.type = parsing_stack.back().second.type;
-    new_token.content = parsing_stack.back().second.content;
+    if (new_token.type->type_no == 31)
+        new_token.content = "'" + parsing_stack.back().second.content + "'";
+    else
+        new_token.content = "\"" + parsing_stack.back().second.content + "\"";
     new_token.is_const = parsing_stack.back().second.is_const;
-    new_token.str_len = parsing_stack.back().second.str_len;
-    new_token.is_literal = true;
-    new_token.is_implicit = false;
     return true;
 }
 
@@ -1827,18 +1738,6 @@ bool Parser::process_bool_const_expression(Token &new_token) {
         new_token.content = "true";
     else
         new_token.content = "false";
-    new_token.is_literal = true;
-    new_token.is_implicit = false;
-    return true;
-}
-
-bool Parser::process_var_access_expression(Token &new_token) {
-    new_token.type = parsing_stack.back().second.type;
-    new_token.content = parsing_stack.back().second.content;
-    new_token.is_const = parsing_stack.back().second.is_const;
-    new_token.str_len = parsing_stack.back().second.str_len;
-    new_token.is_literal = false;
-    new_token.is_implicit = parsing_stack.back().second.is_implicit;
     return true;
 }
 
@@ -1846,9 +1745,6 @@ bool Parser::process_single_expression(Token &new_token) {
     new_token.type = parsing_stack.back().second.type;
     new_token.content = parsing_stack.back().second.content;
     new_token.is_const = parsing_stack.back().second.is_const;
-    new_token.str_len = parsing_stack.back().second.str_len;
-    new_token.is_literal = parsing_stack.back().second.is_literal;
-    new_token.is_implicit = parsing_stack.back().second.is_implicit;
     return true;
 }
 
@@ -1865,8 +1761,6 @@ bool Parser::process_not_expression(Token &new_token) {
     new_token.type->category = 0;
     new_token.type->type_no = type->type_no;
     new_token.is_const = true;
-    new_token.is_literal = false;
-    new_token.is_implicit = false;
     if (type->type_no <= 19)
         new_token.content = "~ " + parsing_stack.back().second.content;
     else
@@ -1890,8 +1784,36 @@ bool Parser::process_address_expression(Token &new_token) {
         new_token.content = "& " + parsing_stack.back().second.content;
     }
     new_token.is_const = true;
-    new_token.is_literal = false;
-    new_token.is_implicit = false;
+    return true;
+}
+
+bool Parser::process_unary_add_expression(Token &new_token) {
+    Type *type = parsing_stack.back().second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    if (type->category != 0 || type->type_no > 26) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
+        return false;
+    }
+    new_token.type = parsing_stack.back().second.type;
+    new_token.is_const = true;
+    new_token.content = "+ " + parsing_stack.back().second.content;
+    return true;
+}
+
+bool Parser::process_unary_subtract_expression(Token &new_token) {
+    Type *type = parsing_stack.back().second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    if (type->category != 0 || type->type_no > 26) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
+        return false;
+    }
+    new_token.type = parsing_stack.back().second.type;
+    new_token.is_const = true;
+    new_token.content = "- " + parsing_stack.back().second.content;
     return true;
 }
 
@@ -3042,7 +2964,7 @@ void Parser::grammar_init() {
     tmp.left = 67;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 64));
-    tmp.process = &Parser::process_var_access_expression;
+    tmp.process = &Parser::process_single_expression;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //first-expression = basic-expression
@@ -3066,6 +2988,29 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(6, 15));
     tmp.right.push_back(Symbol(-1, 68));
     tmp.process = &Parser::process_address_expression;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //first-expression = + first-expression
+    tmp.left = 68;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(6, 7));
+    tmp.right.push_back(Symbol(-1, 68));
+    tmp.process = &Parser::process_unary_add_expression;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //first-expression = - first-expression
+    tmp.left = 68;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(6, 8));
+    tmp.right.push_back(Symbol(-1, 68));
+    tmp.process = &Parser::process_unary_subtract_expression;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //second-expression = first-expression
+    tmp.left = 69;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 68));
+    tmp.process = &Parser::process_single_expression;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }

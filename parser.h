@@ -33,7 +33,6 @@ private:
     std::string id_with_type(Type *type, std::vector<std::string> id_list, std::string struct_name = "");
     bool type_match(Type *a, Type *b, int match_type = 1) const; // 0 -- exclusive 1 -- match
     bool functype_match(FuncType *a, FuncType *b, int match_type = 1) const; // 0 -- exclusive 1 -- match
-    bool char_check(Token &token);
     bool process_default(Token &new_token);
     bool process_newline(Token &new_token);
     bool process_semicolon_newline(Token &new_token);
@@ -112,10 +111,11 @@ private:
     bool process_array_index_list(Token &new_token);
     bool process_string_const_expression(Token &new_token);
     bool process_bool_const_expression(Token &new_token);
-    bool process_var_access_expression(Token &new_token);
     bool process_single_expression(Token &new_token);
     bool process_not_expression(Token &new_token);
     bool process_address_expression(Token &new_token);
+    bool process_unary_add_expression(Token &new_token);
+    bool process_unary_subtract_expression(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);

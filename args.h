@@ -241,7 +241,7 @@ struct Token {
     };
     std::unordered_set<int> record_defined_ids;
     Type *type;
-    bool is_const, is_implicit, is_literal;
+    bool is_const;
     Token();
     Token(int category, int no, int line = 1, int col = 1, int pos = 0, std::string content = "");
     Token(Symbol s);
@@ -273,8 +273,6 @@ struct SymbolTable {
     std::unordered_map<int, Type*> symbols;
     std::unordered_map<int, bool> is_const;
     std::unordered_map<int, std::string> const_val; //for integers, floats and strings
-    std::unordered_map<int, int> const_strlen; //for const strings
-    std::unordered_map<int, bool> const_implicit_str; //for const strings
     std::unordered_map<int, std::vector<SymbolTable*> > subtable;
     std::unordered_set<int> enum_items;
     bool defined(int no) const;
