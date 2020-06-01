@@ -233,6 +233,8 @@ struct Token {
     int category, no, line, col, pos;
     std::string content;
     std::vector<int> id_list, id_line, id_col, id_pos;
+    std::vector<Type*> expr_type;
+    std::vector<bool> expr_const;
     union {
         int str_len;
         int array_len;

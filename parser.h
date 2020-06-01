@@ -103,10 +103,13 @@ private:
     bool process_M8(Token &new_token);
     bool process_label_part(Token &new_token);
     bool process_assign_statement(Token &new_token);
+    bool process_no_param_proc_func_statement(Token &new_token);
+    bool process_proc_func_statement(Token &new_token);
     bool process_id_var_access(Token &new_token);
     bool process_array_var_access(Token &new_token);
     bool process_member_var_access(Token &new_token);
     bool process_pointer_var_access(Token &new_token);
+    bool process_proc_func_access(Token &new_token);
     bool process_M10(Token &new_token);
     bool process_single_array_index_list(Token &new_token);
     bool process_array_index_list(Token &new_token);
@@ -136,6 +139,8 @@ private:
     bool process_less_than_equal_expression(Token &new_token);
     bool process_greater_than_equal_expression(Token &new_token);
     bool process_in_expression(Token &new_token);
+    bool process_single_expression_list(Token &new_token);
+    bool process_expression_list(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);

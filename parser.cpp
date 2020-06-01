@@ -9,10 +9,11 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 72;
+int Parser::num_nonterminal = 73;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
+    symbol_table.functype = NULL;
     current_symbol_table = &symbol_table;
     indent = 0;
     grammar_init();
@@ -1463,6 +1464,14 @@ bool Parser::process_procedure_heading(Token &new_token) {
 bool Parser::process_function_heading(Token &new_token) {
     current_symbol_table->functype->ret_type = parsing_stack[parsing_stack.size() - 2].second.type;
     current_symbol_table->symbols[current_symbol_table->functype->id_no] = parsing_stack[parsing_stack.size() - 2].second.type;
+    Type *type = current_symbol_table->functype->ret_type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    if (type->category == 2) {
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "array return type not supported");
+        return false;
+    }
     for (int i = 0; i < indent; i++)
         result << "\t";
     std::vector<std::string> tmp;
@@ -1562,7 +1571,7 @@ bool Parser::process_proc_func_block(Token &new_token) {
     if (current_symbol_table->functype->ret_type) {
         for (int i = 0; i < indent; i++)
             result << "\t";
-        result << "return " << no_token[current_symbol_table->functype->id_no] << ";\n";
+        result << "return " << no_token[current_symbol_table->functype->id_no] << "_ret;\n";
     }
     indent--;
     for (int i = 0; i < indent; i++)
@@ -1578,7 +1587,8 @@ bool Parser::process_M7(Token &new_token) {
         for (int i = 0; i < indent; i++)
             result << "\t";
         std::vector<std::string> tmp;
-        tmp.push_back(no_token[current_symbol_table->functype->id_no]);
+        std::string tmp_str = no_token[current_symbol_table->functype->id_no] + "_ret";
+        tmp.push_back(tmp_str);
         result << id_with_type(current_symbol_table->functype->ret_type, tmp);
         result << ";\n";
     }
@@ -1637,14 +1647,86 @@ bool Parser::process_assign_statement(Token &new_token) {
     return true;
 }
 
+bool Parser::process_no_param_proc_func_statement(Token &new_token) {
+    int id_no = parsing_stack.back().second.no;
+    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
+        if (p->defined(id_no))
+            if (p->subtable.count(id_no)) {
+                bool flag = false;
+                for (int i = 0; i < p->subtable[id_no].size(); i++)
+                    if (p->subtable[id_no][i]->functype->param_list.empty())
+                        flag = true;
+                if (! flag) {
+                    output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "procedure/function not declared");
+                    return false;
+                }
+            }
+            else {
+                output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier type is not allowed");
+                return false;
+            }
+    if (! new_token.type) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "procedure/function not declared");
+        return false;
+    }
+    result << no_token[id_no] << "();\n";
+    return true;
+}
+
+bool Parser::process_proc_func_statement(Token &new_token) {
+    bool flag = false;
+    int id_no = parsing_stack[parsing_stack.size() - 4].second.no;
+    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
+        if (p->subtable.count(id_no)) {
+            for (int i = 0; i < p->subtable[id_no].size(); i++)
+                if (p->subtable[id_no][i]->functype->param_list.size() == parsing_stack[parsing_stack.size() - 2].second.expr_type.size()) {
+                    bool match = true, completely_match = true;
+                    for (int j = 0; j < p->subtable[id_no][i]->functype->param_list.size(); j++)
+                        if (! (p->subtable[id_no][i]->functype->param_list[j].second.first == 1 && parsing_stack[parsing_stack.size() - 2].second.expr_const[j])) {
+                            if (p->subtable[id_no][i]->functype->param_list[j].second.first == 1) {
+                                if (! type_match(p->subtable[id_no][i]->functype->param_list[j].second.second, parsing_stack[parsing_stack.size() - 2].second.expr_type[j], 1)) {
+                                    match = completely_match = false;
+                                    break;
+                                }
+                            }
+                            else
+                                if (! type_match(p->subtable[id_no][i]->functype->param_list[j].second.second, parsing_stack[parsing_stack.size() - 2].second.expr_type[j], 2)) {
+                                    match = completely_match = false;
+                                    break;
+                                }
+                                else
+                                    if (! type_match(p->subtable[id_no][i]->functype->param_list[j].second.second, parsing_stack[parsing_stack.size() - 2].second.expr_type[j], 1))
+                                        completely_match = false;
+                        }
+                        else {
+                            match = completely_match = false;
+                            break;
+                        }
+                    if ((! flag && match) || completely_match)
+                        flag = true;
+                }
+            if (flag)
+                break;
+        }
+    if (! flag) {
+        output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure/function not declared");
+        return false;
+    }
+    result << no_token[id_no] + "(" + parsing_stack[parsing_stack.size() - 2].second.content + ");\n";
+    return true;
+}
+
 bool Parser::process_id_var_access(Token &new_token) {
     new_token.type = NULL;
     int id_no = parsing_stack.back().second.no;
+    new_token.content = no_token[id_no];
     for (SymbolTable *p = current_symbol_table; p; p = p->parent)
         if (p->defined(id_no))
             if (p->symbols.count(id_no)) {
                 new_token.type = p->symbols[id_no];
                 new_token.is_const = p->is_const[id_no];
+                if (p->functype && p->functype->ret_type && p->functype->id_no == id_no)
+                    new_token.content = new_token.content + "_ret";
                 break;
             }
             else
@@ -1652,15 +1734,35 @@ bool Parser::process_id_var_access(Token &new_token) {
                     new_token.type = p->enum_items[id_no];
                     new_token.is_const = true;
                 }
-                else {
-                    output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier type is not allowed");
-                    return false;
-                }
+                else
+                    if (p->subtable.count(id_no)) {
+                        bool flag = false;
+                        for (int i = 0; i < p->subtable[id_no].size(); i++)
+                            if (p->subtable[id_no][i]->functype->param_list.empty()) {
+                                flag = true;
+                                if (! p->subtable[id_no][i]->functype->ret_type) {
+                                    new_token.type = new Type;
+                                    new_token.type->category = 0;
+                                    new_token.type->type_no = 37;
+                                }
+                                else
+                                    new_token.type = p->subtable[id_no][i]->functype->ret_type;
+                                new_token.is_const = true;
+                                new_token.content += "()";
+                            }
+                        if (! flag) {
+                            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier type is not allowed");
+                            return false;
+                        }
+                    }
+                    else {
+                        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier type is not allowed");
+                        return false;
+                    }
     if (! new_token.type) {
         output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier is not defined");
         return false;
     }
-    new_token.content = no_token[id_no];
     return true;
 }
 
@@ -1713,6 +1815,59 @@ bool Parser::process_pointer_var_access(Token &new_token) {
     new_token.type = type->pointer_type;
     new_token.is_const = false;
     new_token.content = "*" + parsing_stack[parsing_stack.size() - 2].second.content;
+    return true;
+}
+
+bool Parser::process_proc_func_access(Token &new_token) {
+    bool flag = false;
+    int id_no = parsing_stack[parsing_stack.size() - 4].second.no;
+    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
+        if (p->subtable.count(id_no)) {
+            for (int i = 0; i < p->subtable[id_no].size(); i++)
+                if (p->subtable[id_no][i]->functype->param_list.size() == parsing_stack[parsing_stack.size() - 2].second.expr_type.size()) {
+                    bool match = true, completely_match = true;
+                    for (int j = 0; j < p->subtable[id_no][i]->functype->param_list.size(); j++)
+                        if (! (p->subtable[id_no][i]->functype->param_list[j].second.first == 1 && parsing_stack[parsing_stack.size() - 2].second.expr_const[j])) {
+                            if (p->subtable[id_no][i]->functype->param_list[j].second.first == 1) {
+                                if (! type_match(p->subtable[id_no][i]->functype->param_list[j].second.second, parsing_stack[parsing_stack.size() - 2].second.expr_type[j], 1)) {
+                                    match = completely_match = false;
+                                    break;
+                                }
+                            }
+                            else
+                                if (! type_match(p->subtable[id_no][i]->functype->param_list[j].second.second, parsing_stack[parsing_stack.size() - 2].second.expr_type[j], 2)) {
+                                    match = completely_match = false;
+                                    break;
+                                }
+                                else
+                                    if (! type_match(p->subtable[id_no][i]->functype->param_list[j].second.second, parsing_stack[parsing_stack.size() - 2].second.expr_type[j], 1))
+                                        completely_match = false;
+                        }
+                        else {
+                            match = completely_match = false;
+                            break;
+                        }
+                    if ((! flag && match) || completely_match) {
+                        flag = true;
+                        if (! p->subtable[id_no][i]->functype->ret_type) {
+                            new_token.type = new Type;
+                            new_token.type->category = 0;
+                            new_token.type->type_no = 37;
+                        }
+                        else
+                            new_token.type = p->subtable[id_no][i]->functype->ret_type;
+                    }
+                }
+            if (flag)
+                break;
+        }
+    if (! flag) {
+        new_token.type = NULL;
+        output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure/function not declared");
+        return false;
+    }
+    new_token.is_const = true;
+    new_token.content = no_token[id_no] + "(" + parsing_stack[parsing_stack.size() - 2].second.content + ")";
     return true;
 }
 
@@ -2170,11 +2325,11 @@ bool Parser::process_equal_expression(Token &new_token) {
     for (; typeb && typeb->category == 6; typeb = typeb->named_type);
     if (! typea || ! typeb)
         return false;
-    if (typea->category == 2 || typea->category == 4 || typea->category == 5) {
+    if (typea->category == 2 || typea->category == 4 || typea->category == 5 || (typea->category == 0 && typea->type_no == 37)) {
         output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "incompatible types");
         return false;
     }
-    if (typeb->category == 2 || typeb->category == 4 || typeb->category == 5) {
+    if (typeb->category == 2 || typeb->category == 4 || typeb->category == 5 || (typeb->category == 0 && typeb->type_no == 37)) {
         output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
         return false;
     }
@@ -2197,11 +2352,11 @@ bool Parser::process_not_equal_expression(Token &new_token) {
     for (; typeb && typeb->category == 6; typeb = typeb->named_type);
     if (! typea || ! typeb)
         return false;
-    if (typea->category == 2 || typea->category == 4 || typea->category == 5) {
+    if (typea->category == 2 || typea->category == 4 || typea->category == 5 || (typea->category == 0 && typea->type_no == 37)) {
         output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "incompatible types");
         return false;
     }
-    if (typeb->category == 2 || typeb->category == 4 || typeb->category == 5) {
+    if (typeb->category == 2 || typeb->category == 4 || typeb->category == 5 || (typeb->category == 0 && typeb->type_no == 37)) {
         output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
         return false;
     }
@@ -2224,11 +2379,11 @@ bool Parser::process_less_than_expression(Token &new_token) {
     for (; typeb && typeb->category == 6; typeb = typeb->named_type);
     if (! typea || ! typeb)
         return false;
-    if (typea->category == 2 || typea->category == 4 || typea->category == 5) {
+    if (typea->category == 2 || typea->category == 4 || typea->category == 5 || (typea->category == 0 && typea->type_no == 37)) {
         output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "incompatible types");
         return false;
     }
-    if (typeb->category == 2 || typeb->category == 4 || typeb->category == 5) {
+    if (typeb->category == 2 || typeb->category == 4 || typeb->category == 5 || (typeb->category == 0 && typeb->type_no == 37)) {
         output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
         return false;
     }
@@ -2251,11 +2406,11 @@ bool Parser::process_greater_than_expression(Token &new_token) {
     for (; typeb && typeb->category == 6; typeb = typeb->named_type);
     if (! typea || ! typeb)
         return false;
-    if (typea->category == 2 || typea->category == 4 || typea->category == 5) {
+    if (typea->category == 2 || typea->category == 4 || typea->category == 5 || (typea->category == 0 && typea->type_no == 37)) {
         output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "incompatible types");
         return false;
     }
-    if (typeb->category == 2 || typeb->category == 4 || typeb->category == 5) {
+    if (typeb->category == 2 || typeb->category == 4 || typeb->category == 5 || (typeb->category == 0 && typeb->type_no == 37)) {
         output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
         return false;
     }
@@ -2278,11 +2433,11 @@ bool Parser::process_less_than_equal_expression(Token &new_token) {
     for (; typeb && typeb->category == 6; typeb = typeb->named_type);
     if (! typea || ! typeb)
         return false;
-    if (typea->category == 2 || typea->category == 4 || typea->category == 5) {
+    if (typea->category == 2 || typea->category == 4 || typea->category == 5 || (typea->category == 0 && typea->type_no == 37)) {
         output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "incompatible types");
         return false;
     }
-    if (typeb->category == 2 || typeb->category == 4 || typeb->category == 5) {
+    if (typeb->category == 2 || typeb->category == 4 || typeb->category == 5 || (typeb->category == 0 && typeb->type_no == 37)) {
         output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
         return false;
     }
@@ -2305,11 +2460,11 @@ bool Parser::process_greater_than_equal_expression(Token &new_token) {
     for (; typeb && typeb->category == 6; typeb = typeb->named_type);
     if (! typea || ! typeb)
         return false;
-    if (typea->category == 2 || typea->category == 4 || typea->category == 5) {
+    if (typea->category == 2 || typea->category == 4 || typea->category == 5 || (typea->category == 0 && typea->type_no == 37)) {
         output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "incompatible types");
         return false;
     }
-    if (typeb->category == 2 || typeb->category == 4 || typeb->category == 5) {
+    if (typeb->category == 2 || typeb->category == 4 || typeb->category == 5 || (typeb->category == 0 && typeb->type_no == 37)) {
         output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
         return false;
     }
@@ -2347,6 +2502,24 @@ bool Parser::process_in_expression(Token &new_token) {
     new_token.type->type_no = 27;
     new_token.content = parsing_stack.back().second.content + ".count(" + parsing_stack[parsing_stack.size() - 3].second.content + ")";
     new_token.is_const = true;
+    return true;
+}
+
+bool Parser::process_single_expression_list(Token &new_token) {
+    new_token.expr_type.clear();
+    new_token.expr_const.clear();
+    new_token.expr_type.push_back(parsing_stack.back().second.type);
+    new_token.expr_const.push_back(parsing_stack.back().second.is_const);
+    new_token.content = parsing_stack.back().second.content;
+    return true;
+}
+
+bool Parser::process_expression_list(Token &new_token) {
+    new_token.expr_type = parsing_stack[parsing_stack.size() - 3].second.expr_type;
+    new_token.expr_const = parsing_stack[parsing_stack.size() - 3].second.expr_const;
+    new_token.expr_type.push_back(parsing_stack.back().second.type);
+    new_token.expr_const.push_back(parsing_stack.back().second.is_const);
+    new_token.content = parsing_stack[parsing_stack.size() - 3].second.content + ", " + parsing_stack.back().second.content;
     return true;
 }
 
@@ -3395,6 +3568,25 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_assign_statement;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 identifier
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.process = &Parser::process_no_param_proc_func_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 identifier '(' expression-list ')'
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.right.push_back(Symbol(7, 4));
+    tmp.right.push_back(Symbol(-1, 72));
+    tmp.right.push_back(Symbol(7, 5));
+    tmp.process = &Parser::process_proc_func_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //M9 = ε
     tmp.left = 63;
     tmp.right.clear();
@@ -3434,6 +3626,16 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(-1, 64));
     tmp.right.push_back(Symbol(6, 14));
     tmp.process = &Parser::process_pointer_var_access;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //variable-access = identifier '(' expression-list ')'
+    tmp.left = 64;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(2, 0));
+    tmp.right.push_back(Symbol(7, 4));
+    tmp.right.push_back(Symbol(-1, 72));
+    tmp.right.push_back(Symbol(7, 5));
+    tmp.process = &Parser::process_proc_func_access;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //M10 = ε
@@ -3747,6 +3949,22 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(0, 22));
     tmp.right.push_back(Symbol(-1, 70));
     tmp.process = &Parser::process_in_expression;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //expression-list = expression
+    tmp.left = 72;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 71));
+    tmp.process = &Parser::process_single_expression_list;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //expression-list = expression-list ',' expression
+    tmp.left = 72;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 72));
+    tmp.right.push_back(Symbol(7, 1));
+    tmp.right.push_back(Symbol(-1, 71));
+    tmp.process = &Parser::process_expression_list;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }
