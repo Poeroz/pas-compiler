@@ -105,11 +105,15 @@ private:
     bool process_assign_statement(Token &new_token);
     bool process_no_param_proc_func_statement(Token &new_token);
     bool process_proc_func_statement(Token &new_token);
+    bool process_no_param_rtl_func_statement(Token &new_token);
+    bool process_rtl_func_statement(Token &new_token);
     bool process_id_var_access(Token &new_token);
     bool process_array_var_access(Token &new_token);
     bool process_member_var_access(Token &new_token);
     bool process_pointer_var_access(Token &new_token);
     bool process_proc_func_access(Token &new_token);
+    bool process_no_param_rtl_func_access(Token &new_token);
+    bool process_rtl_func_access(Token &new_token);
     bool process_M10(Token &new_token);
     bool process_single_array_index_list(Token &new_token);
     bool process_array_index_list(Token &new_token);

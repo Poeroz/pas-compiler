@@ -27,6 +27,10 @@ bool Type::is_base_type() const {
     return category == 0 || category == 1 || (category == 6 && named_type->is_base_type());
 }
 
+bool Type::is_writeable() const {
+    return category == 0 || (category == 6 && named_type->is_writeable());
+}
+
 bool Type::no_constructed_type() const {
     return category == 0 || (category == 1 && pointer_type->no_constructed_type()) || category == 6;
 }
@@ -50,7 +54,7 @@ Symbol::Symbol(int category, int no) :
 
 Symbol::Symbol(Token t) :
     category(t.category), no(t.no) {
-    if (t.category >= 1 && t.category <= 5)
+    if ((t.category >= 1 && t.category <= 5) || t.category == 8)
         no = 0;
 }
 

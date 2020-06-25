@@ -1716,6 +1716,153 @@ bool Parser::process_proc_func_statement(Token &new_token) {
     return true;
 }
 
+bool Parser::process_no_param_rtl_func_statement(Token &new_token) {
+    int func_no = parsing_stack.back().second.no;
+    switch (func_no) {
+        
+        default:
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "RTL function does not support");
+            return false;
+    }
+    return true;
+}
+
+bool Parser::process_rtl_func_statement(Token &new_token) {
+    int func_no = parsing_stack[parsing_stack.size() - 4].second.no;
+    switch (func_no) {
+        case 0:
+            result << "std::cin";
+            for (int i = 0; i < parsing_stack[parsing_stack.size() - 2].second.expr_type.size(); i++) {
+                if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[i])
+                    return false;
+                if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[i]->is_writeable() || parsing_stack[parsing_stack.size() - 2].second.expr_const[i]) {
+                    output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure/function not declared");
+                    return false;
+                }
+                result << " >> " << parsing_stack[parsing_stack.size() - 2].second.expr_content[i];
+            }
+            result << ";\n";
+            break;
+        case 1:
+            result << "std::cin";
+            for (int i = 0; i < parsing_stack[parsing_stack.size() - 2].second.expr_type.size(); i++) {
+                if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[i])
+                    return false;
+                if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[i]->is_writeable() || parsing_stack[parsing_stack.size() - 2].second.expr_const[i]) {
+                    output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure/function not declared");
+                    return false;
+                }
+                result << " >> " << parsing_stack[parsing_stack.size() - 2].second.expr_content[i];
+            }
+            result << ";\n";
+            for (int i = 0; i < indent; i++)
+                result << "\t";
+            result << "std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\\n');\n";
+            break;
+        case 2:
+            if (parsing_stack[parsing_stack.size() - 2].second.expr_type.size() < 2) {
+                output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure/function not declared");
+                return false;
+            }
+            result << "{\n";
+            indent++;
+            for (int i = 0; i < indent; i++)
+                result << "\t";
+            if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[0])
+                return false;
+            if (! (parsing_stack[parsing_stack.size() - 2].second.expr_type[0]->category == 0 && parsing_stack[parsing_stack.size() - 2].second.expr_type[0]->type_no == 33)) {
+                output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure/function not declared");
+                return false;
+            }
+            result << "std::istringstream stream(" << parsing_stack[parsing_stack.size() - 2].second.expr_content[0] << ");\n";
+            for (int i = 0; i < indent; i++)
+                result << "\t";
+            result << "stream";
+            for (int i = 1; i < parsing_stack[parsing_stack.size() - 2].second.expr_type.size(); i++) {
+                if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[i])
+                    return false;
+                if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[i]->is_writeable() || parsing_stack[parsing_stack.size() - 2].second.expr_const[i]) {
+                    output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure/function not declared");
+                    return false;
+                }
+                result << " >> " << parsing_stack[parsing_stack.size() - 2].second.expr_content[i];
+            }
+            result << ";\n"; 
+            indent--;
+            for (int i = 0; i < indent; i++)
+                result << "\t";
+            result << "}\n";
+            break;
+        case 3:
+            result << "std::cout";
+            for (int i = 0; i < parsing_stack[parsing_stack.size() - 2].second.expr_type.size(); i++) {
+                if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[i])
+                    return false;
+                if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[i]->is_writeable()) {
+                    output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure/function not declared");
+                    return false;
+                }
+                result << " << " << parsing_stack[parsing_stack.size() - 2].second.expr_content[i];
+            }
+            result << ";\n";
+            break;
+        case 4:
+            result << "std::cout";
+            for (int i = 0; i < parsing_stack[parsing_stack.size() - 2].second.expr_type.size(); i++) {
+                if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[i])
+                    return false;
+                if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[i]->is_writeable()) {
+                    output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure/function not declared");
+                    return false;
+                }
+                result << " << " << parsing_stack[parsing_stack.size() - 2].second.expr_content[i];
+            }
+            result << " << std::endl;\n";
+            break;
+        case 5:
+            if (parsing_stack[parsing_stack.size() - 2].second.expr_type.size() < 2) {
+                output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure/function not declared");
+                return false;
+            }
+            result << "{\n";
+            indent++;
+            for (int i = 0; i < indent; i++)
+                result << "\t";
+            if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[0])
+                return false;
+            if (! (parsing_stack[parsing_stack.size() - 2].second.expr_type[0]->category == 0 && parsing_stack[parsing_stack.size() - 2].second.expr_type[0]->type_no == 33) || parsing_stack[parsing_stack.size() - 2].second.expr_const[0]) {
+                output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure/function not declared");
+                return false;
+            }
+            result << "std::ostringstream stream;\n";
+            for (int i = 0; i < indent; i++)
+                result << "\t";
+            result << "stream";
+            for (int i = 1; i < parsing_stack[parsing_stack.size() - 2].second.expr_type.size(); i++) {
+                if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[i])
+                    return false;
+                if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[i]->is_writeable()) {
+                    output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure/function not declared");
+                    return false;
+                }
+                result << " << " << parsing_stack[parsing_stack.size() - 2].second.expr_content[i];
+            }
+            result << ";\n";
+            for (int i = 0; i < indent; i++)
+                result << "\t";
+            result << parsing_stack[parsing_stack.size() - 2].second.expr_content[0] << " = stream.str();\n";
+            indent--;
+            for (int i = 0; i < indent; i++)
+                result << "\t";
+            result << "}\n";
+            break;
+        default:
+            output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "RTL function does not support");
+            return false;
+    }
+    return true;
+}
+
 bool Parser::process_id_var_access(Token &new_token) {
     new_token.type = NULL;
     int id_no = parsing_stack.back().second.no;
@@ -1868,6 +2015,30 @@ bool Parser::process_proc_func_access(Token &new_token) {
     }
     new_token.is_const = true;
     new_token.content = no_token[id_no] + "(" + parsing_stack[parsing_stack.size() - 2].second.content + ")";
+    return true;
+}
+
+bool Parser::process_no_param_rtl_func_access(Token &new_token) {
+    new_token.type = NULL;
+    int func_no = parsing_stack.back().second.no;
+    switch (func_no) {
+        
+        default:
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "RTL function does not support");
+            return false;
+    }
+    return true;
+}
+
+bool Parser::process_rtl_func_access(Token &new_token) {
+    new_token.type = NULL;
+    int func_no = parsing_stack[parsing_stack.size() - 4].second.no;
+    switch (func_no) {
+        
+        default:
+            output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "RTL function does not support");
+            return false;
+    }
     return true;
 }
 
@@ -2510,6 +2681,7 @@ bool Parser::process_single_expression_list(Token &new_token) {
     new_token.expr_const.clear();
     new_token.expr_type.push_back(parsing_stack.back().second.type);
     new_token.expr_const.push_back(parsing_stack.back().second.is_const);
+    new_token.expr_content.push_back(parsing_stack.back().second.content);
     new_token.content = parsing_stack.back().second.content;
     return true;
 }
@@ -2517,8 +2689,10 @@ bool Parser::process_single_expression_list(Token &new_token) {
 bool Parser::process_expression_list(Token &new_token) {
     new_token.expr_type = parsing_stack[parsing_stack.size() - 3].second.expr_type;
     new_token.expr_const = parsing_stack[parsing_stack.size() - 3].second.expr_const;
+    new_token.expr_content = parsing_stack[parsing_stack.size() - 3].second.expr_content;
     new_token.expr_type.push_back(parsing_stack.back().second.type);
     new_token.expr_const.push_back(parsing_stack.back().second.is_const);
+    new_token.expr_content.push_back(parsing_stack.back().second.content);
     new_token.content = parsing_stack[parsing_stack.size() - 3].second.content + ", " + parsing_stack.back().second.content;
     return true;
 }
@@ -3587,6 +3761,25 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_proc_func_statement;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 RTL-function
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(8, 0));
+    tmp.process = &Parser::process_no_param_rtl_func_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 RTL-function '(' expression-list ')'
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(8, 0));
+    tmp.right.push_back(Symbol(7, 4));
+    tmp.right.push_back(Symbol(-1, 72));
+    tmp.right.push_back(Symbol(7, 5));
+    tmp.process = &Parser::process_rtl_func_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //M9 = ε
     tmp.left = 63;
     tmp.right.clear();
@@ -3636,6 +3829,23 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(-1, 72));
     tmp.right.push_back(Symbol(7, 5));
     tmp.process = &Parser::process_proc_func_access;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //variable-access = RTL-function
+    tmp.left = 64;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(8, 0));
+    tmp.process = &Parser::process_no_param_rtl_func_access;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //variable-access = RTL-function '(' expression-list ')'
+    tmp.left = 64;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(8, 0));
+    tmp.right.push_back(Symbol(7, 4));
+    tmp.right.push_back(Symbol(-1, 72));
+    tmp.right.push_back(Symbol(7, 5));
+    tmp.process = &Parser::process_rtl_func_access;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //M10 = ε

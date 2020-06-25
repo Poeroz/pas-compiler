@@ -216,6 +216,7 @@ struct Type {
     std::vector<std::pair<int, std::string> > enum_list;
     std::vector<std::pair<std::vector<int>, Type*> > record_list;
     bool is_base_type() const;
+    bool is_writeable() const;
     bool no_constructed_type() const;
     bool can_be_defined_in_set() const;
 };
@@ -235,6 +236,7 @@ struct Token {
     std::vector<int> id_list, id_line, id_col, id_pos;
     std::vector<Type*> expr_type;
     std::vector<bool> expr_const;
+    std::vector<std::string> expr_content;
     union {
         int str_len;
         int array_len;
