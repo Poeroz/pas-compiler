@@ -9,7 +9,7 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 73;
+int Parser::num_nonterminal = 78;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
@@ -587,12 +587,6 @@ bool Parser::process_newline(Token &new_token) {
 
 bool Parser::process_semicolon_newline(Token &new_token) {
     result << ";\n";
-    return true;
-}
-
-bool Parser::process_indent(Token &new_token) {
-    for (int i = 0; i < indent; i++)
-        result << "\t";
     return true;
 }
 
@@ -1612,16 +1606,26 @@ bool Parser::process_label_part(Token &new_token) {
     int label_no = -1;
     for (SymbolTable *p = current_symbol_table; p; p = p->parent)
         if (p->labels.count(label)) {
+            if (p->label_defined[label]) {
+                output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "label has already been defined");
+                return false;
+            }
+            p->label_defined[label] = true;
             label_no = p->labels[label];
             break;
         }
     if (label_no == -1) {
-        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "label has not been defined");
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "label has not been declared");
         return false;
     }
-    for (int i = 0; i < indent; i++)
-        result << "\t";
     result << "label_" << label_no << ":" << std::endl;
+    return true;
+}
+
+bool Parser::process_empty_statement(Token &new_token) {
+    if (parsing_stack.size() - 2 >= 0 && parsing_stack[parsing_stack.size() - 2].second.category == -1 && parsing_stack[parsing_stack.size() - 2].second.no == 73) {
+        result << ";\n";
+    }
     return true;
 }
 
@@ -1860,6 +1864,27 @@ bool Parser::process_rtl_func_statement(Token &new_token) {
             output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "RTL function does not support");
             return false;
     }
+    return true;
+}
+
+bool Parser::process_compound_statement(Token &new_token) {
+    indent--;
+    for (int i = 0; i < indent; i++)
+        result << "\t";
+    result << "}\n";
+    if (parsing_stack.size() - 6 >= 0 && parsing_stack[parsing_stack.size() - 6].second.category == -1 && parsing_stack[parsing_stack.size() - 6].second.no == 73)
+        parsing_stack[parsing_stack.size() - 6].second.format_dealed = false;
+    return true;
+}
+
+bool Parser::process_M9(Token &new_token) {
+    if (parsing_stack.size() - 2 >= 0 && parsing_stack[parsing_stack.size() - 2].second.category == -1 && parsing_stack[parsing_stack.size() - 2].second.no == 73 && ! parsing_stack[parsing_stack.size() - 2].second.format_dealed) {
+        parsing_stack[parsing_stack.size() - 2].second.format_dealed = true;
+        result << "\n";
+        indent++;
+    }
+    for (int i = 0; i < indent; i++)
+        result << "\t";
     return true;
 }
 
@@ -2694,6 +2719,53 @@ bool Parser::process_expression_list(Token &new_token) {
     new_token.expr_const.push_back(parsing_stack.back().second.is_const);
     new_token.expr_content.push_back(parsing_stack.back().second.content);
     new_token.content = parsing_stack[parsing_stack.size() - 3].second.content + ", " + parsing_stack.back().second.content;
+    return true;
+}
+
+bool Parser::process_M11(Token &new_token) {
+    new_token.format_dealed = false;
+    return true;
+}
+
+bool Parser::process_M12(Token &new_token) {
+    if (parsing_stack.size() - 3 >= 0 && parsing_stack[parsing_stack.size() - 3].second.category == -1 && parsing_stack[parsing_stack.size() - 3].second.no == 73 && ! parsing_stack[parsing_stack.size() - 3].second.format_dealed) {
+        parsing_stack[parsing_stack.size() - 3].second.format_dealed = true;
+        result << " {\n";
+    }
+    else {
+        for (int i = 0; i < indent; i++)
+            result << "\t";
+        result << "{\n";
+    }
+    indent++;
+    return true;
+}
+
+bool Parser::process_M13(Token &new_token) {
+    Type *type = parsing_stack[parsing_stack.size() - 2].second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    if (type->category != 0 || ! (type->type_no >= 27 && type->type_no <= 30)) {
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "boolean expression expected");
+        return false;
+    }
+    result << "if (" << parsing_stack[parsing_stack.size() - 2].second.content << ")";
+    return true;
+}
+
+bool Parser::process_M14(Token &new_token) {
+    if (parsing_stack[parsing_stack.size() - 2].second.format_dealed) {
+        indent--;
+        parsing_stack[parsing_stack.size() - 2].second.format_dealed = false;
+    }
+    return true;
+}
+
+bool Parser::process_M15(Token &new_token) {
+    for (int i = 0; i < indent; i++)
+        result << "\t";
+    result << "else";
     return true;
 }
 
@@ -3703,24 +3775,25 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //statement-with-labels = label-part statement-with-labels
+    //statement-with-labels = label-part statement
     tmp.left = 60;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 61));
-    tmp.right.push_back(Symbol(-1, 60));
-    tmp.process = &Parser::process_default;
-    grammar.push_back(tmp);
-    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //statement-with-labels = statement
-    tmp.left = 60;
-    tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 62));
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    // label-part = integer-literal ':'
+    //label-part = ε
     tmp.left = 61;
     tmp.right.clear();
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //label-part = label-part M9 integer-literal ':'
+    tmp.left = 61;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 61));
+    tmp.right.push_back(Symbol(-1, 63));
     tmp.right.push_back(Symbol(3, 0));
     tmp.right.push_back(Symbol(7, 2));
     tmp.process = &Parser::process_label_part;
@@ -3729,7 +3802,7 @@ void Parser::grammar_init() {
     //statement = ε
     tmp.left = 62;
     tmp.right.clear();
-    tmp.process = &Parser::process_default;
+    tmp.process = &Parser::process_empty_statement;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //statement = M9 variable-access ':=' expression
@@ -3780,10 +3853,35 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_rtl_func_statement;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = begin M12 statement-sequence end
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 3));
+    tmp.right.push_back(Symbol(-1, 74));
+    tmp.right.push_back(Symbol(-1, 59));
+    tmp.right.push_back(Symbol(0, 14));
+    tmp.process = &Parser::process_compound_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 if expression then M13 M11 statement-with-labels M14 else-part
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(0, 20));
+    tmp.right.push_back(Symbol(-1, 71));
+    tmp.right.push_back(Symbol(0, 42));
+    tmp.right.push_back(Symbol(-1, 75));
+    tmp.right.push_back(Symbol(-1, 73));
+    tmp.right.push_back(Symbol(-1, 60));
+    tmp.right.push_back(Symbol(-1, 76));
+    tmp.right.push_back(Symbol(-1, 77));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //M9 = ε
     tmp.left = 63;
     tmp.right.clear();
-    tmp.process = &Parser::process_indent;
+    tmp.process = &Parser::process_M9;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //variable-access = identifier
@@ -4177,6 +4275,53 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_expression_list;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M11 = ε
+    tmp.left = 73;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M11;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M12 = ε
+    tmp.left = 74;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M12;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M13 = ε
+    tmp.left = 75;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M13;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M14 = ε
+    tmp.left = 76;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M14;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //else-part = ε
+    tmp.left = 77;
+    tmp.right.clear();
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //else-part = else M15 M11 statement-with-labels M14
+    tmp.left = 77;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 13));
+    tmp.right.push_back(Symbol(-1, 78));
+    tmp.right.push_back(Symbol(-1, 73));
+    tmp.right.push_back(Symbol(-1, 60));
+    tmp.right.push_back(Symbol(-1, 76));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M15 = ε
+    tmp.left = 78;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M15;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }
 
 int Parser::get_matrix_idx(Symbol symbol) {
@@ -4442,7 +4587,8 @@ void Parser::cal_parsing_table() {
                     parsing_table[i][Symbol(END_OF_TOKENS, 0)] = std::make_pair(3, 0);
                 else
                     for (std::set<Symbol>::iterator it1 = it->lookahead.begin(); it1 != it->lookahead.end(); it1++)
-                        parsing_table[i][*it1] = std::make_pair(2, it->generation_no);
+                        if (! parsing_table[i][*it1].first) // 解决悬空-else问题
+                            parsing_table[i][*it1] = std::make_pair(2, it->generation_no);
             }
     }
 }

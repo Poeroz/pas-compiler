@@ -37,7 +37,6 @@ private:
     bool process_default(Token &new_token);
     bool process_newline(Token &new_token);
     bool process_semicolon_newline(Token &new_token);
-    bool process_indent(Token &new_token);
     bool process_M1(Token &new_token);
     bool process_label(Token &new_token);
     bool process_int_constant_def(Token &new_token);
@@ -102,11 +101,14 @@ private:
     bool process_program_statement(Token &new_token);
     bool process_M8(Token &new_token);
     bool process_label_part(Token &new_token);
+    bool process_empty_statement(Token &new_token);
     bool process_assign_statement(Token &new_token);
     bool process_no_param_proc_func_statement(Token &new_token);
     bool process_proc_func_statement(Token &new_token);
     bool process_no_param_rtl_func_statement(Token &new_token);
     bool process_rtl_func_statement(Token &new_token);
+    bool process_compound_statement(Token &new_token);
+    bool process_M9(Token &new_token);
     bool process_id_var_access(Token &new_token);
     bool process_array_var_access(Token &new_token);
     bool process_member_var_access(Token &new_token);
@@ -145,6 +147,11 @@ private:
     bool process_in_expression(Token &new_token);
     bool process_single_expression_list(Token &new_token);
     bool process_expression_list(Token &new_token);
+    bool process_M11(Token &new_token);
+    bool process_M12(Token &new_token);
+    bool process_M13(Token &new_token);
+    bool process_M14(Token &new_token);
+    bool process_M15(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);

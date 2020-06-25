@@ -245,7 +245,10 @@ struct Token {
     };
     std::unordered_set<int> record_defined_ids;
     Type *type;
-    bool is_const;
+    union {
+        bool is_const;
+        bool format_dealed;
+    };
     Token();
     Token(int category, int no, int line = 1, int col = 1, int pos = 0, std::string content = "");
     Token(Symbol s);
@@ -273,6 +276,7 @@ struct SymbolTable {
     SymbolTable* parent;
     FuncType *functype; //for procedures and functions
     std::unordered_map<std::string, int> labels;
+    std::unordered_map<std::string, bool> label_defined;
     std::unordered_map<int, Type*> named_types;
     std::unordered_map<int, Type*> symbols;
     std::unordered_map<int, bool> is_const;
