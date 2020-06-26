@@ -1721,6 +1721,12 @@ bool Parser::process_no_param_proc_func_statement(Token &new_token) {
 
 bool Parser::process_proc_func_statement(Token &new_token) {
     bool flag = false;
+    for (int i = 0; i < parsing_stack[parsing_stack.size() - 2].second.expr_type.size(); i++) {
+        Type *type = parsing_stack[parsing_stack.size() - 2].second.expr_type[i];
+        for (; type && type->category == 6; type = type->named_type);
+        if (! type)
+            return false;
+    }
     int id_no = parsing_stack[parsing_stack.size() - 4].second.no;
     for (SymbolTable *p = current_symbol_table; p; p = p->parent)
         if (p->subtable.count(id_no)) {
@@ -2180,6 +2186,12 @@ bool Parser::process_pointer_var_access(Token &new_token) {
 
 bool Parser::process_proc_func_access(Token &new_token) {
     bool flag = false;
+    for (int i = 0; i < parsing_stack[parsing_stack.size() - 2].second.expr_type.size(); i++) {
+        Type *type = parsing_stack[parsing_stack.size() - 2].second.expr_type[i];
+        for (; type && type->category == 6; type = type->named_type);
+        if (! type)
+            return false;
+    }
     int id_no = parsing_stack[parsing_stack.size() - 4].second.no;
     for (SymbolTable *p = current_symbol_table; p; p = p->parent)
         if (p->subtable.count(id_no)) {
