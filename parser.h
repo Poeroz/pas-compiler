@@ -37,6 +37,7 @@ private:
     bool process_default(Token &new_token);
     bool process_newline(Token &new_token);
     bool process_semicolon_newline(Token &new_token);
+    bool process_program(Token &new_token);
     bool process_M1(Token &new_token);
     bool process_label(Token &new_token);
     bool process_int_constant_def(Token &new_token);

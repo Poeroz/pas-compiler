@@ -227,6 +227,7 @@ struct FuncType {
     Type* ret_type; // NULL -- procedure
     std::vector<std::pair<int, std::pair<int, Type*> > > param_list; // 0 -- ordinal 1 -- ref 2 -- const
     bool defined;
+    int line, col, pos;
 };
 
 struct Symbol;

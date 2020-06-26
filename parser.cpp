@@ -590,6 +590,17 @@ bool Parser::process_semicolon_newline(Token &new_token) {
     return true;
 }
 
+bool Parser::process_program(Token &new_token) {
+    bool flag = true;
+    for (int i = 0; i < current_symbol_table->subtable.size(); i++)
+        for (int j = 0; j < current_symbol_table->subtable[i].size(); j++)
+            if (! current_symbol_table->subtable[i][j]->functype->defined) {
+                output_error(current_symbol_table->subtable[i][j]->functype->line, current_symbol_table->subtable[i][j]->functype->col, current_symbol_table->subtable[i][j]->functype->pos, "procedure/function not defined");
+                flag = false;
+            }
+    return flag;
+}
+
 bool Parser::process_M1(Token &new_token) {
     result << "#include <bits/stdc++.h>\n\n";
     return true;
@@ -1570,6 +1581,9 @@ bool Parser::process_M6(Token &new_token) {
     new_symbol_table->functype = new FuncType;
     new_symbol_table->functype->id_no = id_no;
     new_symbol_table->functype->defined = false;
+    new_symbol_table->functype->line = parsing_stack[parsing_stack.size() - 2].second.line;
+    new_symbol_table->functype->col = parsing_stack[parsing_stack.size() - 2].second.col;
+    new_symbol_table->functype->pos = parsing_stack[parsing_stack.size() - 2].second.pos;
     new_symbol_table->symbols[id_no] = NULL;
     current_symbol_table = new_symbol_table;
     return true;
@@ -3027,7 +3041,7 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(7, 3));
     tmp.right.push_back(Symbol(-1, 4));
     tmp.right.push_back(Symbol(7, 0));
-    tmp.process = &Parser::process_default;
+    tmp.process = &Parser::process_program;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //program = M1 program-block '.'
@@ -3036,7 +3050,7 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(-1, 2));
     tmp.right.push_back(Symbol(-1, 4));
     tmp.right.push_back(Symbol(7, 0));
-    tmp.process = &Parser::process_default;
+    tmp.process = &Parser::process_program;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //M1 = ε
