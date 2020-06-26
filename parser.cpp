@@ -9,7 +9,7 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 85;
+int Parser::num_nonterminal = 88;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
