@@ -9,7 +9,7 @@
 #include "args.h"
 #include "parser.h"
 
-int Parser::num_nonterminal = 79;
+int Parser::num_nonterminal = 85;
 
 Parser::Parser() {
     symbol_table.parent = NULL;
@@ -638,6 +638,7 @@ bool Parser::process_int_constant_def(Token &new_token) {
     result << parsing_stack[parsing_stack.size() - 2].second.content << ";\n";
     current_symbol_table->symbols[id_no] = parsing_stack[parsing_stack.size() - 2].second.type;
     current_symbol_table->is_const[id_no] = true;
+    current_symbol_table->is_implicit[id_no] = true;
     current_symbol_table->const_val[id_no] = parsing_stack[parsing_stack.size() - 2].second.content;
     return true;
 }
@@ -655,6 +656,7 @@ bool Parser::process_float_constant_def(Token &new_token) {
     result << constant << ";\n";
     current_symbol_table->symbols[id_no] = parsing_stack[parsing_stack.size() - 2].second.type;
     current_symbol_table->is_const[id_no] = true;
+    current_symbol_table->is_implicit[id_no] = true;
     current_symbol_table->const_val[id_no] = parsing_stack[parsing_stack.size() - 2].second.content;
     return true;
 }
@@ -673,6 +675,7 @@ bool Parser::process_string_constant_def(Token &new_token) {
         result << "const std::string " << no_token[id_no] << " = \"" << parsing_stack[parsing_stack.size() - 2].second.content << "\";\n";
     current_symbol_table->symbols[id_no] = parsing_stack[parsing_stack.size() - 2].second.type;
     current_symbol_table->is_const[id_no] = true;
+    current_symbol_table->is_implicit[id_no] = true;
     current_symbol_table->const_val[id_no] = parsing_stack[parsing_stack.size() - 2].second.content;
     return true;
 }
@@ -689,12 +692,17 @@ bool Parser::process_bool_constant_def(Token &new_token) {
     for (int i = 0; i < indent; i++)
         result << "\t";
     result << "const bool " << no_token[id_no] << " = ";
-    if (parsing_stack[parsing_stack.size() - 2].second.no == 45)
+    if (parsing_stack[parsing_stack.size() - 2].second.no == 45) {
         result << "true;\n";
-    else
+        current_symbol_table->const_val[id_no] = "true";
+    }
+    else {
         result << "false;\n";
+        current_symbol_table->const_val[id_no] = "false";
+    }
     current_symbol_table->symbols[id_no] = type;
     current_symbol_table->is_const[id_no] = true;
+    current_symbol_table->is_implicit[id_no] = true;
     return true;
 }
 
@@ -704,8 +712,7 @@ bool Parser::process_typed_constant_def(Token &new_token) {
     for (; type && type->category == 6; type = type->named_type);
     if (! type)
         return false;
-    if (type->category == 0 && (type->type_no <= 19 || type->type_no == 31 || type->type_no == 33))
-        current_symbol_table->const_val[id_no] = parsing_stack[parsing_stack.size() - 2].second.content;
+    current_symbol_table->is_implicit[id_no] = false;
     result << ";\n";
     return true;
 }
@@ -988,7 +995,7 @@ bool Parser::process_string(Token &new_token) {
     return true;
 }
 
-bool Parser::process_array_subrange_index(Token &new_token) {
+bool Parser::process_array_subrange_case_index(Token &new_token) {
     if (parsing_stack.back().second.category == 2) {
         int id_no = parsing_stack.back().second.no;
         bool flag = false;
@@ -1002,7 +1009,7 @@ bool Parser::process_array_subrange_index(Token &new_token) {
                     for (; type && type->category == 6; type = type->named_type);
                     if (! type)
                         return false;
-                    if (type->category == 0 && (type->type_no <= 19 || type->type_no == 31)) {
+                    if (type->category == 0 && (type->type_no <= 19 || type->type_no == 31) && p->is_implicit[id_no]) {
                         new_token.type = p->symbols[id_no];
                         new_token.content = p->const_val[id_no];
                     }
@@ -1017,12 +1024,19 @@ bool Parser::process_array_subrange_index(Token &new_token) {
                 if (! constant_flag)
                     output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier is not a constant");
                 else
-                    output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible type");
+                    output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
             return false;
         }
         return true;
     }
     else {
+        if (parsing_stack.back().second.category == -1 && parsing_stack.back().second.no == 21) {
+            if (parsing_stack.back().second.str_len != 1) {
+                output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
+                new_token.type = NULL;
+                return false;
+            }
+        }
         new_token.type = parsing_stack.back().second.type;
         new_token.content = parsing_stack.back().second.content;
         return true;
@@ -1874,6 +1888,14 @@ bool Parser::process_compound_statement(Token &new_token) {
     result << "}\n";
     if (parsing_stack.size() - 6 >= 0 && parsing_stack[parsing_stack.size() - 6].second.category == -1 && parsing_stack[parsing_stack.size() - 6].second.no == 73)
         parsing_stack[parsing_stack.size() - 6].second.format_dealed = false;
+    return true;
+}
+
+bool Parser::process_case_statement(Token &new_token) {
+    indent--;
+    for (int i = 0; i < indent; i++)
+        result << "\t";
+    result << "}\n";
     return true;
 }
 
@@ -2769,6 +2791,93 @@ bool Parser::process_M15(Token &new_token) {
     return true;
 }
 
+bool Parser::process_M16(Token &new_token) {
+    Type *type = parsing_stack[parsing_stack.size() - 2].second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    if (type->category != 0) {
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "ordinal or string type expression expected");
+        return false;
+    }
+    if (type->type_no >= 0 && type->type_no <= 19)
+        new_token.case_type = 0;
+    else
+        if (type->type_no == 31)
+            new_token.case_type = 1;
+        else {
+            output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "ordinal or string type expression expected");
+            return false;
+        }
+    result << "switch (" << parsing_stack[parsing_stack.size() - 2].second.content << ") {\n";
+    indent++;
+    return true;
+}
+
+bool Parser::process_case_part(Token &new_token) {
+    if (! (parsing_stack[parsing_stack.size() - 3].second.category == 0 && (parsing_stack[parsing_stack.size() - 3].second.no == 13 || parsing_stack[parsing_stack.size() - 3].second.no == 54))) {
+        for (int i = 0; i < indent; i++)
+            result << "\t";
+        result << "break;\n";
+    }
+    indent--;
+    return true;
+}
+
+bool Parser::process_M17(Token &new_token) {
+    int prev_mark;
+    if (parsing_stack[parsing_stack.size() - 3].second.category == -1 && parsing_stack[parsing_stack.size() - 3].second.no == 79)
+        prev_mark = parsing_stack.size() - 3;
+    else
+        prev_mark = parsing_stack.size() - 5;
+    Type *type = parsing_stack[parsing_stack.size() - 2].second.type;
+    if (! type)
+        return false;
+    if (parsing_stack[prev_mark].second.case_type == 0) {
+        if (! (parsing_stack[parsing_stack.size() - 2].second.type->type_no <= 19)) {
+            output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible type: expected int but found char");
+            return false;
+        }
+        long long case_val = std::stoll(parsing_stack[parsing_stack.size() - 2].second.content, 0, 0);
+        if (parsing_stack[prev_mark].second.case_vals.count(case_val)) {
+            output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "duplicate case label");
+            return false;
+        }
+        parsing_stack[prev_mark].second.case_vals.insert(case_val);
+        for (int i = 0; i < indent; i++)
+            result << "\t";
+        result << "case " << parsing_stack[parsing_stack.size() - 2].second.content << ":\n";
+        indent++;
+    }
+    else {
+        if (! (parsing_stack[parsing_stack.size() - 2].second.type->type_no == 31 || parsing_stack[parsing_stack.size() - 2].second.type->type_no == 33)) {
+            output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible type: expected char but found int");
+            return false;
+        }
+        char tmp[10];
+        sprintf(tmp, parsing_stack[parsing_stack.size() - 2].second.content.c_str());
+        long long case_val = tmp[0];
+        if (parsing_stack[prev_mark].second.case_vals.count(case_val)) {
+            output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "duplicate case label");
+            return false;
+        }
+        parsing_stack[prev_mark].second.case_vals.insert(case_val);
+        for (int i = 0; i < indent; i++)
+            result << "\t";
+        result << "case '" << parsing_stack[parsing_stack.size() - 2].second.content << "':\n";
+        indent++;
+    }
+    return true;
+}
+
+bool Parser::process_M18(Token &new_token) {
+    for (int i = 0; i < indent; i++)
+        result << "\t";
+    result << "default:\n";
+    indent++;
+    return true;
+}
+
 void Parser::grammar_init() {
     Generation tmp;
     //program' = program
@@ -3137,7 +3246,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_array_subrange_list;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //subrange = array-subrange-index '..' array-subrange-index
+    //subrange = array-subrange-case-index '..' array-subrange-case-index
     tmp.left = 18;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 22));
@@ -3199,25 +3308,25 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_string;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //array-subrange-index = identifier
+    //array-subrange-case-index = identifier
     tmp.left = 22;
     tmp.right.clear();
     tmp.right.push_back(Symbol(2, 0));
-    tmp.process = &Parser::process_array_subrange_index;
+    tmp.process = &Parser::process_array_subrange_case_index;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //array-subrange-index = signed-integer
+    //array-subrange-case-index = signed-integer
     tmp.left = 22;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 19));
-    tmp.process = &Parser::process_array_subrange_index;
+    tmp.process = &Parser::process_array_subrange_case_index;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //array-subrange-index = string
+    //array-subrange-case-index = string
     tmp.left = 22;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 21));
-    tmp.process = &Parser::process_array_subrange_index;
+    tmp.process = &Parser::process_array_subrange_case_index;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //enum-list = enum-item
@@ -3878,6 +3987,19 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 case expression of M16 case-else-part end
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(0, 5));
+    tmp.right.push_back(Symbol(-1, 71));
+    tmp.right.push_back(Symbol(0, 30));
+    tmp.right.push_back(Symbol(-1, 79));
+    tmp.right.push_back(Symbol(-1, 80));
+    tmp.right.push_back(Symbol(0, 14));
+    tmp.process = &Parser::process_case_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //M9 = ε
     tmp.left = 63;
     tmp.right.clear();
@@ -4320,6 +4442,96 @@ void Parser::grammar_init() {
     tmp.left = 78;
     tmp.right.clear();
     tmp.process = &Parser::process_M15;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M16 = ε
+    tmp.left = 79;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M16;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //case-else-part = case-part
+    tmp.left = 80;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 81));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //case-else-part = case-part ';'
+    tmp.left = 80;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 81));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //case-else-part = case-part case-else-part
+    tmp.left = 80;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 81));
+    tmp.right.push_back(Symbol(-1, 82));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //case-else-part = case-part ';' case-else-part
+    tmp.left = 80;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 81));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.right.push_back(Symbol(-1, 82));
+    tmp.process = &Parser::process_default;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //case-part = array-subrange-case-index ':' M17 statement-with-labels
+    tmp.left = 81;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 22));
+    tmp.right.push_back(Symbol(7, 2));
+    tmp.right.push_back(Symbol(-1, 83));
+    tmp.right.push_back(Symbol(-1, 60));
+    tmp.process = &Parser::process_case_part;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //case-part = case-part ';' array-subrange-case-index ':' M17 statement-with-labels
+    tmp.left = 81;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 81));
+    tmp.right.push_back(Symbol(7, 3));
+    tmp.right.push_back(Symbol(-1, 22));
+    tmp.right.push_back(Symbol(7, 2));
+    tmp.right.push_back(Symbol(-1, 83));
+    tmp.right.push_back(Symbol(-1, 60));
+    tmp.process = &Parser::process_case_part;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //case-else-part = else M18 statement-sequence
+    tmp.left = 82;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 13));
+    tmp.right.push_back(Symbol(-1, 84));
+    tmp.right.push_back(Symbol(-1, 59));
+    tmp.process = &Parser::process_case_part;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //case-else-part = otherwise M18 statement-sequence
+    tmp.left = 82;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(0, 54));
+    tmp.right.push_back(Symbol(-1, 84));
+    tmp.right.push_back(Symbol(-1, 59));
+    tmp.process = &Parser::process_case_part;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1); 
+    //M17 = ε
+    tmp.left = 83;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M17;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M18 = ε
+    tmp.left = 84;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M18;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }

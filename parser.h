@@ -61,7 +61,7 @@ private:
     bool process_no_sign_signed_float(Token &new_token);
     bool process_signed_float(Token &new_token);
     bool process_string(Token &new_token);
-    bool process_array_subrange_index(Token &new_token);
+    bool process_array_subrange_case_index(Token &new_token);
     bool process_single_enum_list(Token &new_token);
     bool process_enum_list(Token &new_token);
     bool process_enum_item(Token &new_token);
@@ -108,6 +108,7 @@ private:
     bool process_no_param_rtl_func_statement(Token &new_token);
     bool process_rtl_func_statement(Token &new_token);
     bool process_compound_statement(Token &new_token);
+    bool process_case_statement(Token &new_token);
     bool process_M9(Token &new_token);
     bool process_id_var_access(Token &new_token);
     bool process_array_var_access(Token &new_token);
@@ -152,6 +153,10 @@ private:
     bool process_M13(Token &new_token);
     bool process_M14(Token &new_token);
     bool process_M15(Token &new_token);
+    bool process_M16(Token &new_token);
+    bool process_case_part(Token &new_token);
+    bool process_M17(Token &new_token);
+    bool process_M18(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);

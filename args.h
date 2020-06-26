@@ -69,6 +69,7 @@
         51: with
         52: xor
         53: forward
+        54: otherwise
     1: data types
         0: uint8
         1: byte
@@ -242,13 +243,16 @@ struct Token {
         int array_len;
         int id_num;
         int id_no;
+        int case_type;//0 -- int 1 -- char
     };
     std::unordered_set<int> record_defined_ids;
     Type *type;
     union {
         bool is_const;
         bool format_dealed;
+        bool is_literal;
     };
+    std::unordered_set<long long> case_vals;
     Token();
     Token(int category, int no, int line = 1, int col = 1, int pos = 0, std::string content = "");
     Token(Symbol s);
@@ -280,6 +284,7 @@ struct SymbolTable {
     std::unordered_map<int, Type*> named_types;
     std::unordered_map<int, Type*> symbols;
     std::unordered_map<int, bool> is_const;
+    std::unordered_map<int, bool> is_implicit;
     std::unordered_map<int, std::string> const_val; //for integers, floats and strings
     std::unordered_map<int, std::vector<SymbolTable*> > subtable;
     std::unordered_map<int, Type*> enum_items;
