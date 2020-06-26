@@ -2248,7 +2248,55 @@ bool Parser::process_rtl_func_access(Token &new_token) {
     int func_no = parsing_stack[parsing_stack.size() - 4].second.no;
     switch (func_no) {
         case 9:
-            
+            if (parsing_stack[parsing_stack.size() - 2].second.expr_type.size() > 1) {
+                output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "too many parameters");
+                return false;
+            }
+            {
+                Type *type = parsing_stack[parsing_stack.size() - 2].second.expr_type[0];
+                for (; type && type->category == 6; type = type->named_type);
+                if (! type)
+                    return false;
+                if (type->category != 0) {
+                    output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible types");
+                    return false;
+                }
+                if (! (type->type_no >= 0 && type->type_no <= 19)) {
+                    output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible types");
+                    return false;
+                }
+            }
+            new_token.type = new Type;
+            new_token.type->category = 0;
+            new_token.type->type_no = 31;
+            new_token.is_const = true;
+            new_token.content = "((char)" + parsing_stack[parsing_stack.size() - 2].second.expr_content[0] + ")";
+            break;
+        case 10:
+            if (parsing_stack[parsing_stack.size() - 2].second.expr_type.size() > 1) {
+                output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "too many parameters");
+                return false;
+            }
+            {
+                Type *type = parsing_stack[parsing_stack.size() - 2].second.expr_type[0];
+                for (; type && type->category == 6; type = type->named_type);
+                if (! type)
+                    return false;
+                if (type->category != 0) {
+                    output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible types");
+                    return false;
+                }
+                if (! ((type->type_no >= 0 && type->type_no <= 19) || type->type_no == 31)) {
+                    output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible types");
+                    return false;
+                }
+            }
+            new_token.type = new Type;
+            new_token.type->category = 0;
+            new_token.type->type_no = 17;
+            new_token.is_const = true;
+            new_token.content = "((int)" + parsing_stack[parsing_stack.size() - 2].second.expr_content[0] + ")";
+            break; 
         default:
             output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "RTL function does not support");
             return false;
