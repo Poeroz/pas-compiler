@@ -1921,19 +1921,71 @@ bool Parser::process_rtl_func_statement(Token &new_token) {
             result << "}\n";
             break;
         case 7:
-           if (parsing_stack[parsing_stack.size() - 2].second.expr_type.size() > 1) {
-                output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "too many parameters");
+            if (parsing_stack[parsing_stack.size() - 2].second.expr_type.size() > 1) {
+                output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "too many parameters");
                 return false;
             }
             if (! current_symbol_table->functype || ! current_symbol_table->functype->ret_type) {
-                output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedures can't return a value");
+                output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "procedures can't return a value");
                 return false;
             }
+            if (! parsing_stack[parsing_stack.size() - 2].second.expr_type[0])
+                return false;
             if (! type_match(current_symbol_table->functype->ret_type, parsing_stack[parsing_stack.size() - 2].second.expr_type[0], 3)) {
-                output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "incompatible return value types");
+                output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible return value types");
                 return false;
             }
             result << "return " << parsing_stack[parsing_stack.size() - 2].second.expr_content[0] << ";\n";
+            break;
+        case 27:
+            if (parsing_stack[parsing_stack.size() - 2].second.expr_type.size() > 1) {
+                output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "too many parameters");
+                return false;
+            }
+            {
+                Type *type = parsing_stack[parsing_stack.size() - 2].second.expr_type[0];
+                for (; type && type->category == 6; type = type->named_type);
+                if (! type)
+                    return false;
+                if (type->category != 0) {
+                    output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible types");
+                    return false;
+                }
+                if (! ((type->type_no >= 0 && type->type_no <= 19) || type->type_no == 31)) {
+                    output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible types");
+                    return false;
+                }
+            }
+            if (parsing_stack[parsing_stack.size() - 2].second.expr_const[0]) {
+                output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "modification of constant");
+                return false;
+            }
+            result << parsing_stack[parsing_stack.size() - 2].second.expr_content[0] << "--;\n";
+            break;
+        case 30:
+            if (parsing_stack[parsing_stack.size() - 2].second.expr_type.size() > 1) {
+                output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "too many parameters");
+                return false;
+            }
+            {
+                Type *type = parsing_stack[parsing_stack.size() - 2].second.expr_type[0];
+                for (; type && type->category == 6; type = type->named_type);
+                if (! type)
+                    return false;
+                if (type->category != 0) {
+                    output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible types");
+                    return false;
+                }
+                if (! ((type->type_no >= 0 && type->type_no <= 19) || type->type_no == 31)) {
+                    output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible types");
+                    return false;
+                }
+            }
+            if (parsing_stack[parsing_stack.size() - 2].second.expr_const[0]) {
+                output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "modification of constant");
+                return false;
+            }
+            result << parsing_stack[parsing_stack.size() - 2].second.expr_content[0] << "++;\n";
             break;
         default:
             output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "RTL function does not support");
@@ -2068,7 +2120,7 @@ bool Parser::process_id_var_access(Token &new_token) {
                         return false;
                     }
     if (! new_token.type) {
-        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier is not defined");
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "identifier not defined");
         return false;
     }
     return true;
