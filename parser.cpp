@@ -2247,7 +2247,8 @@ bool Parser::process_rtl_func_access(Token &new_token) {
     new_token.type = NULL;
     int func_no = parsing_stack[parsing_stack.size() - 4].second.no;
     switch (func_no) {
-        
+        case 9:
+            
         default:
             output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "RTL function does not support");
             return false;
@@ -2619,6 +2620,21 @@ bool Parser::process_add_expression(Token &new_token) {
     for (; typeb && typeb->category == 6; typeb = typeb->named_type);
     if (! typea || ! typeb)
         return false;
+    if (typea->category == 0 && (typea->type_no == 31 || typea->type_no == 33) && typeb->category == 0 && (typeb->type_no == 31 || typeb->type_no == 33)) {
+        new_token.type = new Type;
+        new_token.type->category = 0;
+        new_token.type->type_no = 33;
+        if (typea->type_no == 33 && parsing_stack[parsing_stack.size() - 3].second.content[0] == '"')
+            parsing_stack[parsing_stack.size() - 3].second.content = "std::string(" + parsing_stack[parsing_stack.size() - 3].second.content + ")";
+        if (typeb->type_no == 33 && parsing_stack.back().second.content[0] == '"')
+            parsing_stack.back().second.content = "std::string(" + parsing_stack.back().second.content + ")";
+        if (typea->type_no == 31)
+            parsing_stack[parsing_stack.size() - 3].second.content = "std::string(1, " + parsing_stack[parsing_stack.size() - 3].second.content + ")";
+        if (typeb->type_no == 31)
+            parsing_stack.back().second.content = "std::string(1, " + parsing_stack.back().second.content + ")";
+        new_token.content = parsing_stack[parsing_stack.size() - 3].second.content + " + " + parsing_stack.back().second.content;
+        return true; 
+    }
     if (typea->category != 0 || typea->type_no > 26) {
         output_error(parsing_stack[parsing_stack.size() - 3].second.line, parsing_stack[parsing_stack.size() - 3].second.col, parsing_stack[parsing_stack.size() - 3].second.pos, "incompatible types");
         return false;
