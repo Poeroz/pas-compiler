@@ -369,7 +369,7 @@ std::string Parser::id_with_type(Type *type, std::vector<std::string> id_list, s
     return res;
 }
 
-// 0--exclusive 1--match 2--compatible
+// 0--exclusive 1--match 2--compatible 3--correspondence
 
 bool Parser::type_match(Type *a, Type *b, int match_type) const {
     if (! a && ! b)
@@ -392,48 +392,62 @@ bool Parser::type_match(Type *a, Type *b, int match_type) const {
             if (a->type_no == b->type_no)
                 return true;
         }
-        else {
-            if (a->type_no >= 0 && a->type_no <= 1 && b->type_no >= 0 && b->type_no <= 1)
-                return true;
-            if (a->type_no >= 2 && a->type_no <= 3 && b->type_no >= 2 && b->type_no <= 3)
-                return true;
-            if (a->type_no >= 4 && a->type_no <= 7 && b->type_no >= 4 && b->type_no <= 7)
-                return true;
-            if (a->type_no == 8 && b->type_no == 8)
-                return true;
-            if (a->type_no >= 9 && a->type_no <= 10 && b->type_no >= 9 && b->type_no <= 10)
-                return true;
-            if (a->type_no >= 13 && a->type_no <= 15 && b->type_no >= 13 && b->type_no <= 15)
-                return true;
-            if (a->type_no >= 16 && a->type_no <= 17 && b->type_no >= 16 && b->type_no <= 17)
-                return true;
-            if (a->type_no == 18 && b->type_no == 18)
-                return true;
-            if (a->type_no == 19 && b->type_no == 19)
-                return true;
-            if (match_type == 1) {
-                if (a->type_no >= 11 && a->type_no <= 12 && b->type_no >= 11 && b->type_no <= 12)
+        else
+            if (match_type == 3) {
+                if (a->type_no <= 19 && b->type_no <= 19)
+                    return true;
+                if (a->type_no >= 19 && a->type_no <= 26 && b->type_no <= 26)
+                    return true;
+                if (a->type_no >= 27 && a->type_no <= 30 && b->type_no >= 27 && b->type_no <= 30)
+                    return true;
+                if ((a->type_no == 32 || a->type_no == 33 || a->type_no == 35) && 
+                    (b->type_no == 32 || b->type_no == 33 || b->type_no == 35))
                     return true;
                 if (a->type_no == b->type_no)
                     return true;
             }
             else {
-                if ((a->type_no == 11 || a->type_no == 12 || a->type_no == 31) && (b->type_no == 11 || b->type_no == 12 || b->type_no == 31))
+                if (a->type_no >= 0 && a->type_no <= 1 && b->type_no >= 0 && b->type_no <= 1)
                     return true;
-                if (a->type_no >= 20 && a->type_no <= 21)
+                if (a->type_no >= 2 && a->type_no <= 3 && b->type_no >= 2 && b->type_no <= 3)
                     return true;
-                if ((a->type_no == 22 || a->type_no == 23 || a->type_no == 25 || a->type_no == 26) && (b->type_no == 22 || b->type_no == 23 || b->type_no == 25 || b->type_no == 26))
+                if (a->type_no >= 4 && a->type_no <= 7 && b->type_no >= 4 && b->type_no <= 7)
                     return true;
-                if (a->type_no == 24 && b->type_no == 24)
+                if (a->type_no == 8 && b->type_no == 8)
                     return true;
-                if (a->type_no >= 27 && a->type_no <= 30 && b->type_no >= 27 && b->type_no <= 30)
+                if (a->type_no >= 9 && a->type_no <= 10 && b->type_no >= 9 && b->type_no <= 10)
                     return true;
-                if ((a->type_no == 32 || a->type_no == 33 || a->type_no == 35) && (b->type_no == 32 || b->type_no == 33 || b->type_no == 35))
+                if (a->type_no >= 13 && a->type_no <= 15 && b->type_no >= 13 && b->type_no <= 15)
                     return true;
-                if ((a->type_no == 34 || a->type_no == 36) && (b->type_no == 34 || b->type_no == 36))
+                if (a->type_no >= 16 && a->type_no <= 17 && b->type_no >= 16 && b->type_no <= 17)
                     return true;
+                if (a->type_no == 18 && b->type_no == 18)
+                    return true;
+                if (a->type_no == 19 && b->type_no == 19)
+                    return true;
+                if (match_type == 1) {
+                    if (a->type_no >= 11 && a->type_no <= 12 && b->type_no >= 11 && b->type_no <= 12)
+                        return true;
+                    if (a->type_no == b->type_no)
+                        return true;
+                }
+                else {
+                    if ((a->type_no == 11 || a->type_no == 12 || a->type_no == 31) && (b->type_no == 11 || b->type_no == 12 || b->type_no == 31))
+                        return true;
+                    if (a->type_no >= 20 && a->type_no <= 21)
+                        return true;
+                    if ((a->type_no == 22 || a->type_no == 23 || a->type_no == 25 || a->type_no == 26) && (b->type_no == 22 || b->type_no == 23 || b->type_no == 25 || b->type_no == 26))
+                        return true;
+                    if (a->type_no == 24 && b->type_no == 24)
+                        return true;
+                    if (a->type_no >= 27 && a->type_no <= 30 && b->type_no >= 27 && b->type_no <= 30)
+                        return true;
+                    if ((a->type_no == 32 || a->type_no == 33 || a->type_no == 35) && (b->type_no == 32 || b->type_no == 33 || b->type_no == 35))
+                        return true;
+                    if ((a->type_no == 34 || a->type_no == 36) && (b->type_no == 34 || b->type_no == 36))
+                        return true;
+                }
             }
-        }
         return false;
     }
     if (a->category == 1)
@@ -1751,7 +1765,25 @@ bool Parser::process_proc_func_statement(Token &new_token) {
 bool Parser::process_no_param_rtl_func_statement(Token &new_token) {
     int func_no = parsing_stack.back().second.no;
     switch (func_no) {
-        
+        case 1:
+            result << "std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\\n');\n";
+            break;
+        case 4:
+            result << "std::cout << std::endl;\n";
+            break;
+        case 7:
+            if (current_symbol_table->functype && current_symbol_table->functype->ret_type) {
+                result << "return " << no_token[current_symbol_table->functype->id_no] << "_ret;\n";
+            }
+            else
+                if (! current_symbol_table->functype)
+                    result << "return 0;\n";
+                else
+                    result << "return;\n";
+            break;
+        case 8:
+            result << "exit(0);\n";
+            break;
         default:
             output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "RTL function does not support");
             return false;
@@ -1887,6 +1919,21 @@ bool Parser::process_rtl_func_statement(Token &new_token) {
             for (int i = 0; i < indent; i++)
                 result << "\t";
             result << "}\n";
+            break;
+        case 7:
+           if (parsing_stack[parsing_stack.size() - 2].second.expr_type.size() > 1) {
+                output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "too many parameters");
+                return false;
+            }
+            if (! current_symbol_table->functype || ! current_symbol_table->functype->ret_type) {
+                output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedures can't return a value");
+                return false;
+            }
+            if (! type_match(current_symbol_table->functype->ret_type, parsing_stack[parsing_stack.size() - 2].second.expr_type[0], 3)) {
+                output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "incompatible return value types");
+                return false;
+            }
+            result << "return " << parsing_stack[parsing_stack.size() - 2].second.expr_content[0] << ";\n";
             break;
         default:
             output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "RTL function does not support");
@@ -2977,11 +3024,11 @@ bool Parser::process_M19(Token &new_token) {
         output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible types");
         return false;
     } 
-    if (! type_match(parsing_stack[parsing_stack.size() - 6].second.type, parsing_stack[parsing_stack.size() - 4].second.type, 2)) {
+    if (! type_match(parsing_stack[parsing_stack.size() - 6].second.type, parsing_stack[parsing_stack.size() - 4].second.type, 3)) {
         output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "incompatible types");
         return false;
     }
-    if (! type_match(parsing_stack[parsing_stack.size() - 6].second.type, parsing_stack[parsing_stack.size() - 2].second.type, 2)) {
+    if (! type_match(parsing_stack[parsing_stack.size() - 6].second.type, parsing_stack[parsing_stack.size() - 2].second.type, 3)) {
         output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible types");
         return false;
     }
