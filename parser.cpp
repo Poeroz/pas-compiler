@@ -1926,6 +1926,33 @@ bool Parser::process_for_statement(Token &new_token) {
     return true;
 }
 
+bool Parser::process_while_statement(Token &new_token) {
+    if (parsing_stack[parsing_stack.size() - 2].second.format_dealed) {
+        indent--;
+        parsing_stack[parsing_stack.size() - 2].second.format_dealed = false;
+    }
+    loop_cnt--;
+    return true;
+}
+
+bool Parser::process_repeat_statement(Token &new_token) {
+    loop_cnt--;
+    indent--;
+    for (int i = 0; i < indent; i++)
+        result << "\t";
+    result << "} while (! (";
+    Type *type = parsing_stack.back().second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    if (type->category != 0 || ! (type->type_no >= 27 && type->type_no <= 30)) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "boolean expression expected");
+        return false;
+    }
+    result << parsing_stack.back().second.content << "));\n";
+    return true;
+}
+
 bool Parser::process_M9(Token &new_token) {
     if (parsing_stack.size() - 2 >= 0 && parsing_stack[parsing_stack.size() - 2].second.category == -1 && parsing_stack[parsing_stack.size() - 2].second.no == 73 && ! parsing_stack[parsing_stack.size() - 2].second.format_dealed) {
         parsing_stack[parsing_stack.size() - 2].second.format_dealed = true;
@@ -2959,6 +2986,27 @@ bool Parser::process_M19(Token &new_token) {
         result << "++)";
     else
         result << "--)";
+    return true;
+}
+
+bool Parser::process_M20(Token &new_token) {
+    loop_cnt++;
+    Type *type = parsing_stack[parsing_stack.size() - 2].second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    if (! type)
+        return false;
+    if (type->category != 0 || ! (type->type_no >= 27 && type->type_no <= 30)) {
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "boolean expression expected");
+        return false;
+    }
+    result << "while (" << parsing_stack[parsing_stack.size() - 2].second.content << ")";
+    return true;
+}
+
+bool Parser::process_M21(Token &new_token) {
+    loop_cnt++;
+    result << "do {\n";
+    indent++;
     return true;
 }
 
@@ -4134,6 +4182,31 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_for_statement;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 while expression do M20 M11 statement-with-labels
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(0, 50));
+    tmp.right.push_back(Symbol(-1, 71));
+    tmp.right.push_back(Symbol(0, 11));
+    tmp.right.push_back(Symbol(-1, 86));
+    tmp.right.push_back(Symbol(-1, 73));
+    tmp.right.push_back(Symbol(-1, 60));
+    tmp.process = &Parser::process_while_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 repeat M21 statement-sequence until expression
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(0, 38));
+    tmp.right.push_back(Symbol(-1, 87));
+    tmp.right.push_back(Symbol(-1, 59));
+    tmp.right.push_back(Symbol(0, 47));
+    tmp.right.push_back(Symbol(-1, 71));
+    tmp.process = &Parser::process_repeat_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //M9 = ε
     tmp.left = 63;
     tmp.right.clear();
@@ -4672,6 +4745,18 @@ void Parser::grammar_init() {
     tmp.left = 85;
     tmp.right.clear();
     tmp.process = &Parser::process_M19;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M20 = ε
+    tmp.left = 86;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M20;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M21 = ε
+    tmp.left = 87;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M21;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }

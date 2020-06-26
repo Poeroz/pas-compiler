@@ -112,6 +112,8 @@ private:
     bool process_break_statement(Token &new_token);
     bool process_continue_statement(Token &new_token);
     bool process_for_statement(Token &new_token);
+    bool process_while_statement(Token &new_token);
+    bool process_repeat_statement(Token &new_token);
     bool process_M9(Token &new_token);
     bool process_id_var_access(Token &new_token);
     bool process_array_var_access(Token &new_token);
@@ -161,6 +163,8 @@ private:
     bool process_M17(Token &new_token);
     bool process_M18(Token &new_token);
     bool process_M19(Token &new_token);
+    bool process_M20(Token &new_token);
+    bool process_M21(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);
