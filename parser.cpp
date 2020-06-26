@@ -1899,6 +1899,14 @@ bool Parser::process_case_statement(Token &new_token) {
     return true;
 }
 
+bool Parser::process_for_statement(Token &new_token) {
+    if (parsing_stack[parsing_stack.size() - 2].second.format_dealed) {
+        indent--;
+        parsing_stack[parsing_stack.size() - 2].second.format_dealed = false;
+    }
+    return true;
+}
+
 bool Parser::process_M9(Token &new_token) {
     if (parsing_stack.size() - 2 >= 0 && parsing_stack[parsing_stack.size() - 2].second.category == -1 && parsing_stack[parsing_stack.size() - 2].second.no == 73 && ! parsing_stack[parsing_stack.size() - 2].second.format_dealed) {
         parsing_stack[parsing_stack.size() - 2].second.format_dealed = true;
@@ -2875,6 +2883,62 @@ bool Parser::process_M18(Token &new_token) {
         result << "\t";
     result << "default:\n";
     indent++;
+    return true;
+}
+
+bool Parser::process_M19(Token &new_token) {
+    Type *type = parsing_stack[parsing_stack.size() - 6].second.type, *val_begin_type = parsing_stack[parsing_stack.size() - 4].second.type, *val_end_type = parsing_stack[parsing_stack.size() - 2].second.type;
+    for (; type && type->category == 6; type = type->named_type);
+    for (; val_begin_type && val_begin_type->category == 6; val_begin_type = val_begin_type->named_type);
+    for (; val_end_type && val_end_type->category == 6; val_end_type = val_end_type->named_type);
+    if (! type || ! val_begin_type || ! val_end_type)
+        return false;
+    if (type->category != 0) {
+        output_error(parsing_stack[parsing_stack.size() - 6].second.line, parsing_stack[parsing_stack.size() - 6].second.col, parsing_stack[parsing_stack.size() - 6].second.pos, "incompatible types");
+        return false;
+    }
+    if (! ((type->type_no >= 0 && type->type_no <= 19) || type->type_no == 31)) {
+        output_error(parsing_stack[parsing_stack.size() - 6].second.line, parsing_stack[parsing_stack.size() - 6].second.col, parsing_stack[parsing_stack.size() - 6].second.pos, "incompatible types");
+        return false;
+    }
+    if (val_begin_type->category != 0) {
+        output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "incompatible types");
+        return false;
+    }
+    if (! ((val_begin_type->type_no >= 0 && val_begin_type->type_no <= 19) || val_begin_type->type_no == 31)) {
+        output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "incompatible types");
+        return false;
+    }
+    if (val_end_type->category != 0) {
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible types");
+        return false;
+    }
+    if (! ((val_end_type->type_no >= 0 && val_end_type->type_no <= 19) || val_end_type->type_no == 31)) {
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible types");
+        return false;
+    } 
+    if (! type_match(parsing_stack[parsing_stack.size() - 6].second.type, parsing_stack[parsing_stack.size() - 4].second.type, 2)) {
+        output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "incompatible types");
+        return false;
+    }
+    if (! type_match(parsing_stack[parsing_stack.size() - 6].second.type, parsing_stack[parsing_stack.size() - 2].second.type, 2)) {
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "incompatible types");
+        return false;
+    }
+    if (parsing_stack[parsing_stack.size() - 6].second.is_const) {
+        output_error(parsing_stack[parsing_stack.size() - 6].second.line, parsing_stack[parsing_stack.size() - 6].second.col, parsing_stack[parsing_stack.size() - 6].second.pos, "assignment of constant");
+        return false;
+    }
+    result << "for (" << parsing_stack[parsing_stack.size() - 6].second.content  << " = " << parsing_stack[parsing_stack.size() - 4].second.content << "; " << parsing_stack[parsing_stack.size() - 6].second.content;
+    if (parsing_stack[parsing_stack.size() - 3].second.no == 43)
+        result << " <= ";
+    else
+        result << " >= ";
+    result << parsing_stack[parsing_stack.size() - 2].second.content << "; " << parsing_stack[parsing_stack.size() - 6].second.content;
+    if (parsing_stack[parsing_stack.size() - 3].second.no == 43)
+        result << "++)";
+    else
+        result << "--)";
     return true;
 }
 
@@ -4000,6 +4064,40 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_case_statement;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 for variable-access ':=' expression to expression do M19 M11 statement-with-labels
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(0, 17));
+    tmp.right.push_back(Symbol(-1, 64));
+    tmp.right.push_back(Symbol(6, 1));
+    tmp.right.push_back(Symbol(-1, 71));
+    tmp.right.push_back(Symbol(0, 43));
+    tmp.right.push_back(Symbol(-1, 71));
+    tmp.right.push_back(Symbol(0, 11));
+    tmp.right.push_back(Symbol(-1, 85));
+    tmp.right.push_back(Symbol(-1, 73));
+    tmp.right.push_back(Symbol(-1, 60));
+    tmp.process = &Parser::process_for_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 for variable-access ':=' expression downto expression do M19 M11 statement-with-labels
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(0, 17));
+    tmp.right.push_back(Symbol(-1, 64));
+    tmp.right.push_back(Symbol(6, 1));
+    tmp.right.push_back(Symbol(-1, 71));
+    tmp.right.push_back(Symbol(0, 12));
+    tmp.right.push_back(Symbol(-1, 71));
+    tmp.right.push_back(Symbol(0, 11));
+    tmp.right.push_back(Symbol(-1, 85));
+    tmp.right.push_back(Symbol(-1, 73));
+    tmp.right.push_back(Symbol(-1, 60));
+    tmp.process = &Parser::process_for_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //M9 = ε
     tmp.left = 63;
     tmp.right.clear();
@@ -4532,6 +4630,12 @@ void Parser::grammar_init() {
     tmp.left = 84;
     tmp.right.clear();
     tmp.process = &Parser::process_M18;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //M19 = ε
+    tmp.left = 85;
+    tmp.right.clear();
+    tmp.process = &Parser::process_M19;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
 }

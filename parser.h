@@ -109,6 +109,7 @@ private:
     bool process_rtl_func_statement(Token &new_token);
     bool process_compound_statement(Token &new_token);
     bool process_case_statement(Token &new_token);
+    bool process_for_statement(Token &new_token);
     bool process_M9(Token &new_token);
     bool process_id_var_access(Token &new_token);
     bool process_array_var_access(Token &new_token);
@@ -157,6 +158,7 @@ private:
     bool process_case_part(Token &new_token);
     bool process_M17(Token &new_token);
     bool process_M18(Token &new_token);
+    bool process_M19(Token &new_token);
     std::vector<bool> empty;
     std::vector<std::vector<Symbol> > first;
     int get_matrix_idx(Symbol symbol);
