@@ -15,7 +15,7 @@ Parser::Parser() {
     symbol_table.parent = NULL;
     symbol_table.functype = NULL;
     current_symbol_table = &symbol_table;
-    indent = 0;
+    indent = loop_cnt = 0;
     grammar_init();
     cal_first();
     cal_collection_of_sets_of_items();
@@ -1899,11 +1899,30 @@ bool Parser::process_case_statement(Token &new_token) {
     return true;
 }
 
+bool Parser::process_break_statement(Token &new_token) {
+    if (! loop_cnt) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "break not allowed");
+        return false;
+    }
+    result << "break;\n";
+    return true;
+}
+
+bool Parser::process_continue_statement(Token &new_token) {
+    if (! loop_cnt) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "continue not allowed");
+        return false;
+    }
+    result << "continue;\n";
+    return true;
+}
+
 bool Parser::process_for_statement(Token &new_token) {
     if (parsing_stack[parsing_stack.size() - 2].second.format_dealed) {
         indent--;
         parsing_stack[parsing_stack.size() - 2].second.format_dealed = false;
     }
+    loop_cnt--;
     return true;
 }
 
@@ -2887,6 +2906,7 @@ bool Parser::process_M18(Token &new_token) {
 }
 
 bool Parser::process_M19(Token &new_token) {
+    loop_cnt++;
     Type *type = parsing_stack[parsing_stack.size() - 6].second.type, *val_begin_type = parsing_stack[parsing_stack.size() - 4].second.type, *val_end_type = parsing_stack[parsing_stack.size() - 2].second.type;
     for (; type && type->category == 6; type = type->named_type);
     for (; val_begin_type && val_begin_type->category == 6; val_begin_type = val_begin_type->named_type);
@@ -4062,6 +4082,22 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(-1, 80));
     tmp.right.push_back(Symbol(0, 14));
     tmp.process = &Parser::process_case_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 break
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(0, 4));
+    tmp.process = &Parser::process_break_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 continue
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(0, 8));
+    tmp.process = &Parser::process_continue_statement;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //statement = M9 for variable-access ':=' expression to expression do M19 M11 statement-with-labels

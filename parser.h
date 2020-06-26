@@ -26,7 +26,7 @@ private:
     std::map<int, std::vector<int> > nonterminal_grammar;
     std::vector<std::pair<int, Token> > parsing_stack;
     void grammar_init();
-    int indent;
+    int indent, loop_cnt;
     std::pair<int, std::string> pas_int_to_c(int sign, std::string s) const;
     std::pair<int, std::string> pas_string_to_c(std::string s) const;
     std::string pas_basic_type_to_c(int type_no) const;
@@ -109,6 +109,8 @@ private:
     bool process_rtl_func_statement(Token &new_token);
     bool process_compound_statement(Token &new_token);
     bool process_case_statement(Token &new_token);
+    bool process_break_statement(Token &new_token);
+    bool process_continue_statement(Token &new_token);
     bool process_for_statement(Token &new_token);
     bool process_M9(Token &new_token);
     bool process_id_var_access(Token &new_token);
