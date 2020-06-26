@@ -2003,9 +2003,8 @@ bool Parser::process_id_var_access(Token &new_token) {
                             if (p->subtable[id_no][i]->functype->param_list.empty()) {
                                 flag = true;
                                 if (! p->subtable[id_no][i]->functype->ret_type) {
-                                    new_token.type = new Type;
-                                    new_token.type->category = 0;
-                                    new_token.type->type_no = 37;
+                                    output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "procedure not allowed");
+                                    return false;
                                 }
                                 else
                                     new_token.type = p->subtable[id_no][i]->functype->ret_type;
@@ -2112,9 +2111,9 @@ bool Parser::process_proc_func_access(Token &new_token) {
                     if ((! flag && match) || completely_match) {
                         flag = true;
                         if (! p->subtable[id_no][i]->functype->ret_type) {
-                            new_token.type = new Type;
-                            new_token.type->category = 0;
-                            new_token.type->type_no = 37;
+                            new_token.type = NULL;
+                            output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure not allowed");
+                            return false;
                         }
                         else
                             new_token.type = p->subtable[id_no][i]->functype->ret_type;
@@ -2125,7 +2124,7 @@ bool Parser::process_proc_func_access(Token &new_token) {
         }
     if (! flag) {
         new_token.type = NULL;
-        output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "procedure/function not declared");
+        output_error(parsing_stack[parsing_stack.size() - 4].second.line, parsing_stack[parsing_stack.size() - 4].second.col, parsing_stack[parsing_stack.size() - 4].second.pos, "function not declared");
         return false;
     }
     new_token.is_const = true;
