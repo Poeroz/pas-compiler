@@ -3042,12 +3042,14 @@ bool Parser::process_M16(Token &new_token) {
         output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "ordinal or string type expression expected");
         return false;
     }
+    new_token.case_vals.clear();
     if (type->type_no >= 0 && type->type_no <= 19)
         new_token.case_type = 0;
     else
         if (type->type_no == 31)
             new_token.case_type = 1;
         else {
+            new_token.case_type = -1;
             output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "ordinal or string type expression expected");
             return false;
         }
@@ -3074,6 +3076,8 @@ bool Parser::process_M17(Token &new_token) {
         prev_mark = parsing_stack.size() - 5;
     Type *type = parsing_stack[parsing_stack.size() - 2].second.type;
     if (! type)
+        return false;
+    if (parsing_stack[prev_mark].second.case_type == -1)
         return false;
     if (parsing_stack[prev_mark].second.case_type == 0) {
         if (! (parsing_stack[parsing_stack.size() - 2].second.type->type_no <= 19)) {
