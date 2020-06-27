@@ -4860,7 +4860,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //case-else-part = case-part case-else-part
+    //case-else-part = case-part else-part-of-case
     tmp.left = 80;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 81));
@@ -4868,7 +4868,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_default;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //case-else-part = case-part ';' case-else-part
+    //case-else-part = case-part ';' else-part-of-case
     tmp.left = 80;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 81));
@@ -4899,7 +4899,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_case_part;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //case-else-part = else M18 statement-sequence
+    //else-part-of-case = else M18 statement-sequence
     tmp.left = 82;
     tmp.right.clear();
     tmp.right.push_back(Symbol(0, 13));
@@ -4908,7 +4908,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_case_part;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //case-else-part = otherwise M18 statement-sequence
+    //else-part-of-case = otherwise M18 statement-sequence
     tmp.left = 82;
     tmp.right.clear();
     tmp.right.push_back(Symbol(0, 54));
