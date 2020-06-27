@@ -238,7 +238,7 @@ struct Token {
     std::string content;
     std::vector<int> id_list, id_line, id_col, id_pos;
     std::vector<Type*> expr_type;
-    std::vector<bool> expr_const;
+    std::vector<bool> expr_const, expr_pointer_const;
     std::vector<std::string> expr_content;
     union {
         int str_len;
@@ -254,6 +254,7 @@ struct Token {
         bool format_dealed;
         bool is_literal;
     };
+    bool pointer_const;
     std::unordered_set<long long> case_vals;
     Token();
     Token(int category, int no, int line = 1, int col = 1, int pos = 0, std::string content = "");

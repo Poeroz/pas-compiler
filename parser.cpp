@@ -1461,7 +1461,7 @@ bool Parser::process_procedure_heading(Token &new_token) {
             std::vector<std::string> tmp;
             tmp.push_back(no_token[current_symbol_table->functype->param_list[i].first]);
             if (current_symbol_table->functype->param_list[i].second.first == 1)
-            tmp[0] = "&" + tmp[0];
+                tmp[0] = "&" + tmp[0];
             result << id_with_type(current_symbol_table->functype->param_list[i].second.second, tmp);
             if (i != current_symbol_table->functype->param_list.size() - 1)
                 result << ", ";
@@ -1495,7 +1495,7 @@ bool Parser::process_function_heading(Token &new_token) {
             std::vector<std::string> tmp;
             tmp.push_back(no_token[current_symbol_table->functype->param_list[i].first]);
             if (current_symbol_table->functype->param_list[i].second.first == 1)
-            tmp[0] = "&" + tmp[0];
+                tmp[0] = "&" + tmp[0];
             result << id_with_type(current_symbol_table->functype->param_list[i].second.second, tmp);
             if (i != current_symbol_table->functype->param_list.size() - 1)
                 result << ", ";
@@ -1686,6 +1686,10 @@ bool Parser::process_assign_statement(Token &new_token) {
         output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "invalid array assignment");
         return false;
     }
+    if (type->category == 1 && parsing_stack.back().second.pointer_const) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
+        return false;
+    }
     if (! type_match(parsing_stack[parsing_stack.size() - 3].second.type, parsing_stack.back().second.type, 2)) {
         output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
         return false;
@@ -1731,6 +1735,10 @@ bool Parser::process_proc_func_statement(Token &new_token) {
         for (; type && type->category == 6; type = type->named_type);
         if (! type)
             return false;
+        if (type->category == 1 && parsing_stack[parsing_stack.size() - 2].second.expr_pointer_const[i]) {
+            output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "using constant pointer as parameter not supported");
+            return false;
+        }
     }
     int id_no = parsing_stack[parsing_stack.size() - 4].second.no;
     for (SymbolTable *p = current_symbol_table; p; p = p->parent)
@@ -2115,6 +2123,7 @@ bool Parser::process_M9(Token &new_token) {
 
 bool Parser::process_id_var_access(Token &new_token) {
     new_token.type = NULL;
+    new_token.pointer_const = false;
     int id_no = parsing_stack.back().second.no;
     new_token.content = no_token[id_no];
     for (SymbolTable *p = current_symbol_table; p; p = p->parent)
@@ -2164,6 +2173,7 @@ bool Parser::process_id_var_access(Token &new_token) {
 
 bool Parser::process_array_var_access(Token &new_token) {
     new_token.type = parsing_stack[parsing_stack.size() - 2].second.type;
+    new_token.pointer_const = false;
     if (! new_token.type)
         return false;
     new_token.is_const = parsing_stack[parsing_stack.size() - 5].second.is_const;
@@ -2173,6 +2183,7 @@ bool Parser::process_array_var_access(Token &new_token) {
 
 bool Parser::process_member_var_access(Token &new_token) {
     new_token.type = NULL;
+    new_token.pointer_const = false;
     Type *type = parsing_stack[parsing_stack.size() - 3].second.type;
     for (; type && type->category == 6; type = type->named_type);
     if (! type || type->category != 4) {
@@ -2202,6 +2213,7 @@ bool Parser::process_member_var_access(Token &new_token) {
 
 bool Parser::process_pointer_var_access(Token &new_token) {
     Type *type = parsing_stack[parsing_stack.size() - 2].second.type;
+    new_token.pointer_const = false;
     for (; type && type->category == 6; type = type->named_type);
     if (! type || type->category != 1) {
         new_token.type = NULL;
@@ -2215,12 +2227,17 @@ bool Parser::process_pointer_var_access(Token &new_token) {
 }
 
 bool Parser::process_proc_func_access(Token &new_token) {
+    new_token.pointer_const = false;
     bool flag = false;
     for (int i = 0; i < parsing_stack[parsing_stack.size() - 2].second.expr_type.size(); i++) {
         Type *type = parsing_stack[parsing_stack.size() - 2].second.expr_type[i];
         for (; type && type->category == 6; type = type->named_type);
         if (! type)
             return false;
+        if (type->category == 1 && parsing_stack[parsing_stack.size() - 2].second.expr_pointer_const[i]) {
+            output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "using constant pointer as parameter not supported");
+            return false;
+        }
     }
     int id_no = parsing_stack[parsing_stack.size() - 4].second.no;
     for (SymbolTable *p = current_symbol_table; p; p = p->parent)
@@ -2274,6 +2291,7 @@ bool Parser::process_proc_func_access(Token &new_token) {
 }
 
 bool Parser::process_no_param_rtl_func_access(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     int func_no = parsing_stack.back().second.no;
     switch (func_no) {
@@ -2286,6 +2304,7 @@ bool Parser::process_no_param_rtl_func_access(Token &new_token) {
 }
 
 bool Parser::process_rtl_func_access(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     int func_no = parsing_stack[parsing_stack.size() - 4].second.no;
     switch (func_no) {
@@ -2434,6 +2453,7 @@ bool Parser::process_array_index_list(Token &new_token) {
 }
 
 bool Parser::process_string_const_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = parsing_stack.back().second.type;
     if (new_token.type->type_no == 31)
         new_token.content = "'" + parsing_stack.back().second.content + "'";
@@ -2444,6 +2464,7 @@ bool Parser::process_string_const_expression(Token &new_token) {
 }
 
 bool Parser::process_bool_const_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = new Type;
     new_token.type->category = 0;
     new_token.type->type_no = 27;
@@ -2456,6 +2477,7 @@ bool Parser::process_bool_const_expression(Token &new_token) {
 }
 
 bool Parser::process_single_expression(Token &new_token) {
+    new_token.pointer_const = parsing_stack.back().second.pointer_const;
     new_token.type = parsing_stack.back().second.type;
     new_token.content = parsing_stack.back().second.content;
     new_token.is_const = parsing_stack.back().second.is_const;
@@ -2463,6 +2485,7 @@ bool Parser::process_single_expression(Token &new_token) {
 }
 
 bool Parser::process_bracket_expression(Token &new_token) {
+    new_token.pointer_const = parsing_stack[parsing_stack.size() - 2].second.pointer_const;
     new_token.type = parsing_stack[parsing_stack.size() - 2].second.type;
     new_token.content = "(" + parsing_stack[parsing_stack.size() - 2].second.content + ")";
     new_token.is_const = parsing_stack[parsing_stack.size() - 2].second.is_const;
@@ -2470,6 +2493,7 @@ bool Parser::process_bracket_expression(Token &new_token) {
 }
 
 bool Parser::process_not_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *type = parsing_stack.back().second.type;
     for (; type && type->category == 6; type = type->named_type);
@@ -2506,11 +2530,13 @@ bool Parser::process_address_expression(Token &new_token) {
         new_token.type->pointer_type = parsing_stack.back().second.type;
         new_token.content = "& " + parsing_stack.back().second.content;
     }
+    new_token.pointer_const = parsing_stack.back().second.is_const;
     new_token.is_const = true;
     return true;
 }
 
 bool Parser::process_unary_add_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *type = parsing_stack.back().second.type;
     for (; type && type->category == 6; type = type->named_type);
@@ -2527,6 +2553,7 @@ bool Parser::process_unary_add_expression(Token &new_token) {
 }
 
 bool Parser::process_unary_subtract_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *type = parsing_stack.back().second.type;
     for (; type && type->category == 6; type = type->named_type);
@@ -2543,6 +2570,7 @@ bool Parser::process_unary_subtract_expression(Token &new_token) {
 }
 
 bool Parser::process_multiply_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2564,6 +2592,7 @@ bool Parser::process_multiply_expression(Token &new_token) {
 }
 
 bool Parser::process_division_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2593,6 +2622,7 @@ bool Parser::process_division_expression(Token &new_token) {
 }
 
 bool Parser::process_integer_division_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2614,6 +2644,7 @@ bool Parser::process_integer_division_expression(Token &new_token) {
 }
 
 bool Parser::process_modulo_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2635,6 +2666,7 @@ bool Parser::process_modulo_expression(Token &new_token) {
 }
 
 bool Parser::process_and_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2662,6 +2694,7 @@ bool Parser::process_and_expression(Token &new_token) {
 }
 
 bool Parser::process_left_shift_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2683,6 +2716,7 @@ bool Parser::process_left_shift_expression(Token &new_token) {
 }
 
 bool Parser::process_right_shift_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2704,6 +2738,7 @@ bool Parser::process_right_shift_expression(Token &new_token) {
 }
 
 bool Parser::process_add_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2740,6 +2775,7 @@ bool Parser::process_add_expression(Token &new_token) {
 }
 
 bool Parser::process_subtract_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2761,6 +2797,7 @@ bool Parser::process_subtract_expression(Token &new_token) {
 }
 
 bool Parser::process_or_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2788,6 +2825,7 @@ bool Parser::process_or_expression(Token &new_token) {
 }
 
 bool Parser::process_xor_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2809,6 +2847,7 @@ bool Parser::process_xor_expression(Token &new_token) {
 }
 
 bool Parser::process_equal_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2836,6 +2875,7 @@ bool Parser::process_equal_expression(Token &new_token) {
 }
 
 bool Parser::process_not_equal_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2863,6 +2903,7 @@ bool Parser::process_not_equal_expression(Token &new_token) {
 }
 
 bool Parser::process_less_than_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2890,6 +2931,7 @@ bool Parser::process_less_than_expression(Token &new_token) {
 }
 
 bool Parser::process_greater_than_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2917,6 +2959,7 @@ bool Parser::process_greater_than_expression(Token &new_token) {
 }
 
 bool Parser::process_less_than_equal_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2944,6 +2987,7 @@ bool Parser::process_less_than_equal_expression(Token &new_token) {
 }
 
 bool Parser::process_greater_than_equal_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2971,6 +3015,7 @@ bool Parser::process_greater_than_equal_expression(Token &new_token) {
 }
 
 bool Parser::process_in_expression(Token &new_token) {
+    new_token.pointer_const = false;
     new_token.type = NULL;
     Type *typea = parsing_stack[parsing_stack.size() - 3].second.type, *typeb = parsing_stack.back().second.type;
     for (; typea && typea->category == 6; typea = typea->named_type);
@@ -2998,9 +3043,12 @@ bool Parser::process_in_expression(Token &new_token) {
 bool Parser::process_single_expression_list(Token &new_token) {
     new_token.expr_type.clear();
     new_token.expr_const.clear();
+    new_token.expr_content.clear();
+    new_token.expr_pointer_const.clear();
     new_token.expr_type.push_back(parsing_stack.back().second.type);
     new_token.expr_const.push_back(parsing_stack.back().second.is_const);
     new_token.expr_content.push_back(parsing_stack.back().second.content);
+    new_token.expr_pointer_const.push_back(parsing_stack.back().second.pointer_const);
     new_token.content = parsing_stack.back().second.content;
     return true;
 }
@@ -3009,9 +3057,11 @@ bool Parser::process_expression_list(Token &new_token) {
     new_token.expr_type = parsing_stack[parsing_stack.size() - 3].second.expr_type;
     new_token.expr_const = parsing_stack[parsing_stack.size() - 3].second.expr_const;
     new_token.expr_content = parsing_stack[parsing_stack.size() - 3].second.expr_content;
+    new_token.expr_pointer_const = parsing_stack[parsing_stack.size() - 3].second.expr_pointer_const;
     new_token.expr_type.push_back(parsing_stack.back().second.type);
     new_token.expr_const.push_back(parsing_stack.back().second.is_const);
     new_token.expr_content.push_back(parsing_stack.back().second.content);
+    new_token.expr_pointer_const.push_back(parsing_stack.back().second.pointer_const);
     new_token.content = parsing_stack[parsing_stack.size() - 3].second.content + ", " + parsing_stack.back().second.content;
     return true;
 }
@@ -4594,15 +4644,15 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_not_expression;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //first-expression = @ first-expression
+    //first-expression = '@' variable-access
     tmp.left = 68;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 15));
-    tmp.right.push_back(Symbol(-1, 68));
+    tmp.right.push_back(Symbol(-1, 64));
     tmp.process = &Parser::process_address_expression;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //first-expression = + first-expression
+    //first-expression = '+' first-expression
     tmp.left = 68;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 7));
@@ -4610,7 +4660,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_unary_add_expression;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //first-expression = - first-expression
+    //first-expression = '-' first-expression
     tmp.left = 68;
     tmp.right.clear();
     tmp.right.push_back(Symbol(6, 8));
@@ -4625,7 +4675,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_single_expression;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //second-expression = second-expression * first-expression
+    //second-expression = second-expression '*' first-expression
     tmp.left = 69;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 69));
@@ -4634,7 +4684,7 @@ void Parser::grammar_init() {
     tmp.process = &Parser::process_multiply_expression;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
-    //second-expression = second-expression / first-expression
+    //second-expression = second-expression '/' first-expression
     tmp.left = 69;
     tmp.right.clear();
     tmp.right.push_back(Symbol(-1, 69));
