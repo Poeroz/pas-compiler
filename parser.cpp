@@ -1645,6 +1645,11 @@ bool Parser::process_M8(Token &new_token) {
 
 bool Parser::process_label_part(Token &new_token) {
     std::string label = parsing_stack[parsing_stack.size() - 2].second.content;
+    for (int i = 0; i < label.length(); i++)
+        if (! isdigit(label[i])) {
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "label syntax error");
+            return false;
+        }
     int label_no = -1;
     for (SymbolTable *p = current_symbol_table; p; p = p->parent)
         if (p->labels.count(label)) {
@@ -1660,7 +1665,7 @@ bool Parser::process_label_part(Token &new_token) {
         output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "label has not been declared");
         return false;
     }
-    result << "label_" << label_no << ":" << std::endl;
+    result << "label_" << label_no << ":\n";
     return true;
 }
 
@@ -2007,6 +2012,31 @@ bool Parser::process_compound_statement(Token &new_token) {
     result << "}\n";
     if (parsing_stack.size() - 6 >= 0 && parsing_stack[parsing_stack.size() - 6].second.category == -1 && parsing_stack[parsing_stack.size() - 6].second.no == 73)
         parsing_stack[parsing_stack.size() - 6].second.format_dealed = false;
+    return true;
+}
+
+bool Parser::process_goto_statement(Token &new_token) {
+    std::string label = parsing_stack.back().second.content;
+    for (int i = 0; i < label.length(); i++)
+        if (! isdigit(label[i])) {
+            output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "label syntax error");
+            return false;
+        }
+    int label_no = -1;
+    for (SymbolTable *p = current_symbol_table; p; p = p->parent)
+        if (p->labels.count(label)) {
+            if (! p->label_defined[label]) {
+                output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "label has not been defined");
+                return false;
+            }
+            label_no = p->labels[label];
+            break;
+        }
+    if (label_no == -1) {
+        output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "label has not been declared");
+        return false;
+    }
+    result << "goto label_" << label_no << ";\n";
     return true;
 }
 
@@ -4294,6 +4324,15 @@ void Parser::grammar_init() {
     tmp.right.push_back(Symbol(-1, 59));
     tmp.right.push_back(Symbol(0, 14));
     tmp.process = &Parser::process_compound_statement;
+    grammar.push_back(tmp);
+    nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
+    //statement = M9 goto integer-literal
+    tmp.left = 62;
+    tmp.right.clear();
+    tmp.right.push_back(Symbol(-1, 63));
+    tmp.right.push_back(Symbol(0, 19));
+    tmp.right.push_back(Symbol(3, 0));
+    tmp.process = &Parser::process_goto_statement;
     grammar.push_back(tmp);
     nonterminal_grammar[tmp.left].push_back(grammar.size() - 1);
     //statement = M9 if expression then M13 M11 statement-with-labels M14 else-part

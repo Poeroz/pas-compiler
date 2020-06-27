@@ -109,6 +109,7 @@ private:
     bool process_no_param_rtl_func_statement(Token &new_token);
     bool process_rtl_func_statement(Token &new_token);
     bool process_compound_statement(Token &new_token);
+    bool process_goto_statement(Token &new_token);
     bool process_case_statement(Token &new_token);
     bool process_break_statement(Token &new_token);
     bool process_continue_statement(Token &new_token);
