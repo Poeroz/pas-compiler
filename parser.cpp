@@ -5323,7 +5323,10 @@ bool Parser::parse(std::vector<Token> tokens) {
         else
             cur_token = token_list[cur_ptr];
         if (parsing_table[parsing_stack.back().first][Symbol(cur_token)].first == 0) {
-            output_error(cur_token.line, cur_token.col, cur_token.pos, "unexpected token");
+            if (cur_token.category == END_OF_TOKENS)
+                output_error(-1, -1, -1, "unexpected end of file");
+            else
+                output_error(cur_token.line, cur_token.col, cur_token.pos, "unexpected token");
             flag = false;
             break;
         }

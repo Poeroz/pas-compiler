@@ -191,6 +191,8 @@
 */
 extern const int num_terminal;
 
+extern int last_line, last_col, last_pos;
+
 /*
     0: basic types
     1: pointer

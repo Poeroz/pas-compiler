@@ -402,6 +402,9 @@ bool Lexer::analyze(std::string input_code) {
                             go_cur();
                     }
     }
+    last_line = cur_line;
+    last_col = cur_col - 1;
+    last_pos = cur_ptr - 1;
     return flag;
 }
 

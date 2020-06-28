@@ -23,6 +23,8 @@ const std::string rtl_functions[47] = {"read", "readln", "readstr", "write", "wr
                                        "sqrt", "trunc", "include", "exclude", "fillchar", "fillbyte", "move"};
 const int num_terminal = 169;
 
+int last_line = 1, last_col = 1, last_pos = 0;
+
 bool Type::is_base_type() const {
     return category == 0 || category == 1 || (category == 6 && named_type->is_base_type());
 }
@@ -92,6 +94,11 @@ std::string get_line(int pos) {
 }
 
 void output_error(int line, int col, int pos, std::string error_info) {
+    if (pos == -1) {
+        line = last_line;
+        col = last_col;
+        pos = last_pos;
+    }
     std::cerr << line << ":" << col << ": " << ERROR_OUT << error_info << std::endl;
     std::cerr << get_line(pos) << std::endl;
     for (int i = 0; i < col - 1; i++)
