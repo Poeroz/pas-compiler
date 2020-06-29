@@ -2432,7 +2432,7 @@ bool Parser::process_array_index_list(Token &new_token) {
     for (; index_type && index_type->category == 6; index_type = index_type->named_type);
     if (! index_type)
         return false;
-    new_token.content = parsing_stack[parsing_stack.size() - 2].second.content;
+    new_token.content = parsing_stack[parsing_stack.size() - 3].second.content;
     if (type->array_index_type == 0) {
         if (index_type->category != 0 || index_type->type_no > 19) {
             output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
@@ -2447,9 +2447,8 @@ bool Parser::process_array_index_list(Token &new_token) {
             return false;
         }
         new_token.type = type->array_type;
-        new_token.content = "[" + parsing_stack.back().second.content + " - '" + type->array_bias + "']";
+        new_token.content += "[" + parsing_stack.back().second.content + " - '" + type->array_bias + "']";
     }
-    new_token.content = parsing_stack[parsing_stack.size() - 3].second.content + new_token.content;
     return true;
 }
 
