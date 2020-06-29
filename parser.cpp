@@ -3122,7 +3122,7 @@ bool Parser::process_M16(Token &new_token) {
     if (! type)
         return false;
     if (type->category != 0) {
-        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "ordinal or string type expression expected");
+        output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "ordinal or char type expression expected");
         return false;
     }
     if (type->type_no >= 0 && type->type_no <= 19)
@@ -3131,7 +3131,7 @@ bool Parser::process_M16(Token &new_token) {
         if (type->type_no == 31)
             new_token.case_type = 1;
         else {
-            output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "ordinal or string type expression expected");
+            output_error(parsing_stack[parsing_stack.size() - 2].second.line, parsing_stack[parsing_stack.size() - 2].second.col, parsing_stack[parsing_stack.size() - 2].second.pos, "ordinal or char type expression expected");
             return false;
         }
     result << "switch (" << parsing_stack[parsing_stack.size() - 2].second.content << ") {\n";
