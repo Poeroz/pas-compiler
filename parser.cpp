@@ -2439,7 +2439,7 @@ bool Parser::process_array_index_list(Token &new_token) {
             return false;
         }
         new_token.type = type->array_type;
-        new_token.content += "[" + parsing_stack.back().second.content + "]";
+        new_token.content += "[" + parsing_stack.back().second.content + " - " + type->array_bias + "]";
     }
     else {
         if (index_type->category != 0 || index_type->type_no != 31) {
@@ -2447,8 +2447,9 @@ bool Parser::process_array_index_list(Token &new_token) {
             return false;
         }
         new_token.type = type->array_type;
-        new_token.content = "[" + parsing_stack.back().second.content + "]";
+        new_token.content = "[" + parsing_stack.back().second.content + " - '" + type->array_bias + "']";
     }
+    new_token.content = parsing_stack[parsing_stack.size() - 3].second.content + new_token.content;
     return true;
 }
 
