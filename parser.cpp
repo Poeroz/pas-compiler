@@ -717,7 +717,7 @@ bool Parser::process_bool_constant_def(Token &new_token) {
     for (int i = 0; i < indent; i++)
         result << "\t";
     result << "const bool " << no_token[id_no] << " = ";
-    if (parsing_stack[parsing_stack.size() - 2].second.no == 45) {
+    if (parsing_stack[parsing_stack.size() - 2].second.no == 44) {
         result << "true;\n";
         current_symbol_table->const_val[id_no] = "true";
     }
@@ -1234,7 +1234,7 @@ bool Parser::process_bool_const_val(Token &new_token) {
         output_error(parsing_stack.back().second.line, parsing_stack.back().second.col, parsing_stack.back().second.pos, "incompatible types");
         return false;
     }
-    if (parsing_stack.back().second.no == 45)
+    if (parsing_stack.back().second.no == 44)
         result << "true";
     else
         result << "false";
@@ -2469,7 +2469,7 @@ bool Parser::process_bool_const_expression(Token &new_token) {
     new_token.type->category = 0;
     new_token.type->type_no = 27;
     new_token.is_const = true;
-    if (parsing_stack.back().second.no == 45)
+    if (parsing_stack.back().second.no == 44)
         new_token.content = "true";
     else
         new_token.content = "false";
