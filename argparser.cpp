@@ -17,7 +17,7 @@ bool ArgParser::parse_arguments(int argc, char *argv[]) const {
             INPUT_FILE_NAME = argv[i];
         else
             if (arg == "-v") {
-                std::cerr << "Pascal-S Complier version 0.0.1" << std::endl;
+                std::cerr << "Pascal-S Complier version 1.0" << std::endl;
                 version_flag = true;
             }
     }
