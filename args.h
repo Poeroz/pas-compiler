@@ -254,7 +254,6 @@ struct Token {
     union {
         bool is_const;
         bool format_dealed;
-        bool is_literal;
     };
     bool pointer_const;
     std::unordered_set<long long> case_vals;
